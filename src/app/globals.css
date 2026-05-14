@@ -193,3 +193,112 @@ input.fun-field {
 .route-chip:hover {
   padding-right: 2.25rem !important;
 }
+
+/* ---------- mascot bob & bigger kid-friendly hero --------------------- */
+
+@keyframes mascot-bob {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50%      { transform: translateY(-12px) rotate(3deg); }
+}
+.mascot-bob {
+  animation: mascot-bob 4s ease-in-out infinite;
+  filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.28));
+}
+
+/* ---------- wobble carrier card on hover (kid-friendly) -------------- */
+
+@keyframes wobble {
+  0%, 100% { transform: translateY(-2px) rotate(0deg); }
+  20% { transform: translateY(-4px) rotate(-3deg); }
+  40% { transform: translateY(-4px) rotate(3deg); }
+  60% { transform: translateY(-4px) rotate(-2deg); }
+  80% { transform: translateY(-4px) rotate(2deg); }
+}
+.carrier-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.carrier-card:hover {
+  animation: wobble 0.6s ease-in-out;
+  box-shadow: 0 18px 36px -10px rgba(56, 189, 248, 0.45);
+}
+
+/* ---------- bouncy +/- counter (passenger picker) -------------------- */
+
+.bouncy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.5rem;
+  width: 2.5rem;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #38bdf8 0%, #6366f1 100%);
+  color: white;
+  font-weight: 800;
+  box-shadow:
+    0 6px 14px -4px rgba(99, 102, 241, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+  cursor: pointer;
+  user-select: none;
+}
+.bouncy-btn:hover {
+  transform: scale(1.12);
+}
+.bouncy-btn:active {
+  transform: scale(0.88);
+}
+.bouncy-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none !important;
+}
+.bouncy-counter-value {
+  min-width: 2.5rem;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: rgb(15 23 42);
+  font-variant-numeric: tabular-nums;
+}
+@media (prefers-color-scheme: dark) {
+  .bouncy-counter-value { color: rgb(241 245 249); }
+}
+
+/* ---------- passport stamp on confirmation --------------------------- */
+
+@keyframes stamp-press {
+  0%   { transform: scale(2.4) rotate(-30deg); opacity: 0; }
+  60%  { transform: scale(0.85) rotate(-12deg); opacity: 1; }
+  80%  { transform: scale(1.05) rotate(-8deg); }
+  100% { transform: scale(1) rotate(-9deg); opacity: 0.92; }
+}
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.9rem;
+  border-radius: 0.6rem;
+  border: 3px solid #b91c1c;
+  color: #b91c1c;
+  font-family: var(--font-geist-mono, ui-monospace, monospace);
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background-color: rgba(254, 226, 226, 0.4);
+  animation: stamp-press 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* ---------- achievement badge ---------------------------------------- */
+
+.badge-fly {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #fde047 0%, #fb923c 60%, #f43f5e 100%);
+  color: #422006;
+  font-weight: 800;
+  font-size: 0.8rem;
+  box-shadow: 0 6px 16px -4px rgba(251, 146, 60, 0.55);
+}

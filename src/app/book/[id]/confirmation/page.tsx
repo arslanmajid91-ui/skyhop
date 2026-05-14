@@ -4,6 +4,8 @@ import { AIRLINES, AIRPORTS } from "@/lib/airlines";
 import { findFlight } from "@/lib/flights";
 import { formatDate, formatPrice, formatTime } from "@/lib/format";
 import Header from "@/components/Header";
+import ConfettiBurst from "@/components/ConfettiBurst";
+import { MascotPlane } from "@/components/icons";
 
 function bookingRef(id: string): string {
   // Six-char A-Z + 0-9, deterministic from id
@@ -35,19 +37,28 @@ export default async function ConfirmationPage({
   return (
     <div className="flex-1 bg-zinc-50 dark:bg-zinc-950">
       <Header />
+      <ConfettiBurst />
       <main className="mx-auto max-w-2xl px-6 py-12">
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center dark:border-emerald-900 dark:bg-emerald-950">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-600 text-white">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+        <div className="relative overflow-hidden rounded-3xl border-2 border-emerald-200 bg-gradient-to-br from-emerald-50 to-cyan-50 p-7 text-center dark:border-emerald-900 dark:from-emerald-950 dark:to-cyan-950">
+          <MascotPlane className="mascot-bob pointer-events-none absolute -right-2 -top-2 h-24 w-24 opacity-90" />
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 text-white shadow-lg">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
               <path d="M5 12l5 5L20 7" />
             </svg>
           </div>
-          <h1 className="mt-3 text-2xl font-semibold text-emerald-900 dark:text-emerald-100">
-            Booking confirmed
+          <h1 className="mt-3 text-3xl font-extrabold text-emerald-900 dark:text-emerald-100">
+            🎉 You&rsquo;re going!
           </h1>
           <p className="mt-1 text-sm text-emerald-800 dark:text-emerald-200">
-            Your booking reference is <strong className="font-mono">{ref}</strong>
+            Show this code at the gate:
           </p>
+          <div className="mt-3 flex items-center justify-center">
+            <span className="stamp text-base sm:text-lg">{ref}</span>
+          </div>
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+            <span className="badge-fly">🏅 First trip unlocked</span>
+            <span className="badge-fly">✈️ {AIRPORTS[first.from]?.city ?? first.from} → {AIRPORTS[last.to]?.city ?? last.to}</span>
+          </div>
         </div>
 
         <div className="mt-6 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">

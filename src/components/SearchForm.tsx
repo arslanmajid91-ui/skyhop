@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AIRPORT_LIST } from "@/lib/airlines";
 import { GlobeIcon, PinIcon, PaperPlaneIcon, SwapIcon } from "./icons";
+import BouncyCounter from "./BouncyCounter";
 
 const today = new Date().toISOString().split("T")[0];
 
@@ -98,15 +99,15 @@ export default function SearchForm({
           </select>
         </FunField>
 
-        {/* TRAVELERS */}
+        {/* TRAVELERS — bouncy +/- counter (kid-friendly) */}
         <FunField label="Travelers" icon={<PeopleIcon />} accent="from-emerald-500 to-teal-400">
-          <select className="fun-field" value={passengers} onChange={(e) => setPassengers(e.target.value)}>
-            {[1, 2, 3, 4, 5, 6].map((n) => (
-              <option key={n} value={n}>
-                {n} {n === 1 ? "passenger" : "passengers"}
-              </option>
-            ))}
-          </select>
+          <BouncyCounter
+            value={Number(passengers)}
+            onChange={(n) => setPassengers(String(n))}
+            min={1}
+            max={6}
+            label="travelers"
+          />
         </FunField>
       </div>
 

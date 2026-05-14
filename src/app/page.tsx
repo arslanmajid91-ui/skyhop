@@ -3,7 +3,7 @@ import Header from "@/components/Header";
 import SearchForm from "@/components/SearchForm";
 import AirlineLogo from "@/components/AirlineLogo";
 import { AIRLINE_LIST } from "@/lib/airlines";
-import { PlaneCruiseIcon } from "@/components/icons";
+import { PlaneCruiseIcon, MascotPlane } from "@/components/icons";
 
 const POPULAR_ROUTES: { from: string; to: string; label: string; emoji: string }[] = [
   { from: "JFK", to: "DXB", label: "New York → Dubai",       emoji: "🌃" },
@@ -76,21 +76,29 @@ export default function Home() {
           {/* Cruising airplane that drifts across the hero */}
           <PlaneCruiseIcon className="plane-drift" />
 
+          {/* Mascot — Hoppy the smiling plane (right side, hidden on mobile) */}
+          <MascotPlane className="mascot-bob pointer-events-none absolute right-4 top-10 hidden h-44 w-44 md:block lg:h-56 lg:w-56" />
+
           {/* Headline */}
           <div className="relative mx-auto max-w-3xl text-center">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium backdrop-blur">
-              <span className="text-base">✈</span>
-              <span>4 carriers · 21 cities · 0 ads</span>
+              <span className="text-base">🛩️</span>
+              <span>Made for little adventurers · 4 carriers · 21 cities</span>
             </div>
             <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl">
               Where to{" "}
               <span className="gradient-text">next?</span>
             </h1>
             <p className="mt-4 text-base text-white/90 sm:text-lg">
-              Compare <strong>Emirates</strong>, <strong>Etihad</strong>,{" "}
-              <strong>Qatar Airways</strong> and <strong>Turkish Airlines</strong> in a
-              single search. No fluff.
+              Pick a city, hop on a plane! Compare <strong>Emirates</strong>,{" "}
+              <strong>Etihad</strong>, <strong>Qatar</strong> and{" "}
+              <strong>Turkish</strong> — all in one super-search.
             </p>
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+              <span className="badge-fly">🪄 No ads</span>
+              <span className="badge-fly">🌈 Fun first</span>
+              <span className="badge-fly">🧳 Kid-friendly</span>
+            </div>
           </div>
         </section>
 
@@ -129,7 +137,7 @@ export default function Home() {
             {AIRLINE_LIST.map((a) => (
               <div
                 key={a.code}
-                className="group relative overflow-hidden rounded-2xl border border-zinc-200 bg-white p-4 transition hover:-translate-y-1 hover:shadow-xl dark:border-zinc-800 dark:bg-zinc-900"
+                className="carrier-card group relative overflow-hidden rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
               >
                 <div
                   className="absolute -right-4 -top-4 h-16 w-16 rounded-full opacity-20 transition group-hover:opacity-40 group-hover:scale-110"
