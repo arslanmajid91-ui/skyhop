@@ -66,6 +66,32 @@ export const AIRPORTS: Record<string, Airport> = {
 
 export const AIRPORT_LIST: Airport[] = Object.values(AIRPORTS);
 
+/** Geographic lat/lng for each airport (used by the real-world Mercator map). */
+export const AIRPORT_LATLNG: Record<string, [lng: number, lat: number]> = {
+  JFK: [-73.7781, 40.6413],
+  LAX: [-118.4085, 33.9416],
+  YYZ: [-79.6248, 43.6777],
+  GRU: [-46.4731, -23.4356],
+  LHR: [-0.4543, 51.47],
+  CDG: [2.5479, 49.0097],
+  FRA: [8.5622, 50.0379],
+  AMS: [4.7683, 52.3105],
+  MAD: [-3.5676, 40.4983],
+  DXB: [55.3657, 25.2532],
+  AUH: [54.6511, 24.433],
+  DOH: [51.608, 25.2731],
+  IST: [28.7519, 41.2753],
+  CAI: [31.4056, 30.1219],
+  BOM: [72.8656, 19.0896],
+  DEL: [77.1, 28.5562],
+  BKK: [100.7501, 13.69],
+  HKG: [113.9185, 22.308],
+  SIN: [103.9915, 1.3644],
+  NRT: [140.3929, 35.772],
+  SYD: [151.1753, -33.9399],
+  JNB: [28.246, -26.1392],
+};
+
 /**
  * Hand-placed positions for each airport on the cartoon world map.
  * Coords are within a 1000 × 500 viewBox (Mercator-ish). Not geographically
