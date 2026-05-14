@@ -29,15 +29,13 @@ export default function Home() {
 
       <main className="flex-1 bg-zinc-50 dark:bg-zinc-950">
         {/* ----- Hero ----- */}
-        <section className="relative overflow-hidden px-6 pb-32 pt-16 text-white">
-          {/* Sunset gradient base */}
-          <div
-            className="absolute inset-0 -z-10"
-            style={{
-              background:
-                "linear-gradient(135deg, #1e1b4b 0%, #4338ca 25%, #c026d3 55%, #f97316 95%)",
-            }}
-          />
+        <section
+          className="relative overflow-hidden px-6 pb-32 pt-16 text-white"
+          style={{
+            background:
+              "linear-gradient(135deg, #1e1b4b 0%, #4338ca 25%, #c026d3 55%, #f97316 95%)",
+          }}
+        >
           {/* Floating colored orbs */}
           <div
             className="float-orb"
@@ -77,7 +75,7 @@ export default function Home() {
           <PlaneCruiseIcon className="plane-drift" />
 
           {/* Mascot — Hoppy the smiling plane (right side, hidden on mobile) */}
-          <MascotPlane className="mascot-bob pointer-events-none absolute right-4 top-10 hidden h-44 w-44 md:block lg:h-56 lg:w-56" />
+          <MascotPlane className="mascot-bob pointer-events-none absolute right-8 top-16 hidden h-32 w-32 md:block lg:right-16 lg:top-20 lg:h-44 lg:w-44" />
 
           {/* Headline */}
           <div className="relative mx-auto max-w-3xl text-center">

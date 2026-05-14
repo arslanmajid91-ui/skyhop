@@ -5,6 +5,7 @@ import { useState } from "react";
 import { AIRPORT_LIST } from "@/lib/airlines";
 import { GlobeIcon, PinIcon, PaperPlaneIcon, SwapIcon } from "./icons";
 import BouncyCounter from "./BouncyCounter";
+import WorldMapPicker from "./WorldMapPicker";
 
 const today = new Date().toISOString().split("T")[0];
 
@@ -21,6 +22,7 @@ export default function SearchForm({
   const [passengers, setPassengers] = useState(initial?.passengers ?? "1");
   const [error, setError] = useState("");
   const [swapping, setSwapping] = useState(false);
+  const [pickerMode, setPickerMode] = useState<"map" | "list">("map");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -42,41 +44,88 @@ export default function SearchForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-[1fr_auto_1fr_1fr_1fr_1fr]">
-        {/* FROM */}
-        <FunField label="From" icon={<GlobeIcon className="h-4 w-4" />} accent="from-sky-500 to-cyan-400">
-          <select className="fun-field" value={from} onChange={(e) => setFrom(e.target.value)}>
-            {AIRPORT_LIST.map((a) => (
-              <option key={a.code} value={a.code}>
-                {a.code} — {a.city}
-              </option>
-            ))}
-          </select>
-        </FunField>
-
-        {/* SWAP — between From and To */}
-        <div className="hidden items-end justify-center pb-1 lg:flex">
+      {/* Picker mode toggle */}
+      <div className="flex justify-center">
+        <div className="inline-flex rounded-full border border-zinc-200 bg-zinc-50 p-1 dark:border-zinc-700 dark:bg-zinc-800">
           <button
             type="button"
-            onClick={swap}
-            aria-label="Swap origin and destination"
-            className={`flex h-11 w-11 items-center justify-center rounded-full bg-white text-sky-600 shadow-md ring-1 ring-sky-100 transition hover:scale-110 hover:bg-sky-50 active:scale-95 dark:bg-zinc-800 dark:text-sky-400 dark:ring-zinc-700 ${swapping ? "rotate-180" : ""}`}
-            style={{ transitionDuration: "300ms" }}
+            onClick={() => setPickerMode("map")}
+            className={
+              "rounded-full px-3.5 py-1.5 text-xs font-bold transition " +
+              (pickerMode === "map"
+                ? "bg-white text-sky-700 shadow-sm dark:bg-zinc-900 dark:text-sky-300"
+                : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300")
+            }
           >
-            <SwapIcon className="h-5 w-5" />
+            🗺️ Pick on map
+          </button>
+          <button
+            type="button"
+            onClick={() => setPickerMode("list")}
+            className={
+              "rounded-full px-3.5 py-1.5 text-xs font-bold transition " +
+              (pickerMode === "list"
+                ? "bg-white text-sky-700 shadow-sm dark:bg-zinc-900 dark:text-sky-300"
+                : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300")
+            }
+          >
+            🔤 Type instead
           </button>
         </div>
+      </div>
 
-        {/* TO */}
-        <FunField label="To" icon={<PinIcon className="h-4 w-4" />} accent="from-pink-500 to-orange-400">
-          <select className="fun-field" value={to} onChange={(e) => setTo(e.target.value)}>
-            {AIRPORT_LIST.map((a) => (
-              <option key={a.code} value={a.code}>
-                {a.code} — {a.city}
-              </option>
-            ))}
-          </select>
-        </FunField>
+      {pickerMode === "map" ? (
+        <WorldMapPicker
+          from={from}
+          to={to}
+          onChange={(next) => {
+            setFrom(next.from);
+            setTo(next.to);
+          }}
+        />
+      ) : null}
+
+      <div className={`grid grid-cols-1 gap-3 md:grid-cols-2 ${pickerMode === "map" ? "lg:grid-cols-3" : "lg:grid-cols-[1fr_auto_1fr_1fr_1fr_1fr]"}`}>
+        {/* FROM — only in list mode */}
+        {pickerMode === "list" && (
+          <FunField label="From" icon={<GlobeIcon className="h-4 w-4" />} accent="from-sky-500 to-cyan-400">
+            <select className="fun-field" value={from} onChange={(e) => setFrom(e.target.value)}>
+              {AIRPORT_LIST.map((a) => (
+                <option key={a.code} value={a.code}>
+                  {a.code} — {a.city}
+                </option>
+              ))}
+            </select>
+          </FunField>
+        )}
+
+        {/* SWAP — only in list mode, between From and To */}
+        {pickerMode === "list" && (
+          <div className="hidden items-end justify-center pb-1 lg:flex">
+            <button
+              type="button"
+              onClick={swap}
+              aria-label="Swap origin and destination"
+              className={`flex h-11 w-11 items-center justify-center rounded-full bg-white text-sky-600 shadow-md ring-1 ring-sky-100 transition hover:scale-110 hover:bg-sky-50 active:scale-95 dark:bg-zinc-800 dark:text-sky-400 dark:ring-zinc-700 ${swapping ? "rotate-180" : ""}`}
+              style={{ transitionDuration: "300ms" }}
+            >
+              <SwapIcon className="h-5 w-5" />
+            </button>
+          </div>
+        )}
+
+        {/* TO — only in list mode */}
+        {pickerMode === "list" && (
+          <FunField label="To" icon={<PinIcon className="h-4 w-4" />} accent="from-pink-500 to-orange-400">
+            <select className="fun-field" value={to} onChange={(e) => setTo(e.target.value)}>
+              {AIRPORT_LIST.map((a) => (
+                <option key={a.code} value={a.code}>
+                  {a.code} — {a.city}
+                </option>
+              ))}
+            </select>
+          </FunField>
+        )}
 
         {/* DATE */}
         <FunField label="Departure" icon={<CalIcon />} accent="from-violet-500 to-fuchsia-500">
