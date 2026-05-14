@@ -1,15 +1,20 @@
 # skyhop ✈
 
-Flight search like Expedia, focused on **Emirates, Etihad, Qatar Airways, and Turkish Airlines** — the four major Middle East/Turkey long-haul carriers.
+Kid-friendly flight search focused on **Emirates, Etihad, Qatar Airways, and Turkish Airlines** — the four major Middle East / Turkey long-haul carriers. Pick a city on a colorful map, hop on a plane.
 
-Built with **Next.js 16**, **React 19.2**, and **Tailwind v4**. No backend required — flight data is generated deterministically from a mock catalog so every demo run is reproducible.
+Built with **Next.js 16**, **React 19.2**, and **Tailwind v4**. No backend — flight data is generated deterministically from a mock catalog so every demo run is reproducible.
 
 ## Features
 
+- 🗺️ **Three ways to pick a route**
+  - 🎨 **Cartoon map** — hand-placed pins on a stylized world map (default)
+  - 🗺️ **Real-world map** — d3-geo Mercator projection with a great-circle arc between FROM and TO
+  - 🔤 **Type / list** — classic dropdown for power users
 - 🔍 Search by origin, destination, date, cabin, and passenger count
 - 🏷️ Filter by airline, max stops, price; sort by price / duration / departure
 - ✈️ Flight detail page with full segment / baggage / layover breakdown
-- 💳 Mock booking flow: passenger form → fake checkout → confirmation with booking ref
+- 💳 Mock booking flow: passenger form → fake checkout → confirmation (with confetti 🎉)
+- 🧸 Kid-friendly polish: bouncy +/- traveler counter, "Hoppy" mascot plane, drifting plane animation, gradient hero, wobble cards
 
 ## Run it
 
@@ -20,9 +25,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
-
-No env vars needed — there's no real API or database.
+Open [http://localhost:3000](http://localhost:3000). No env vars needed — there's no real API or database.
 
 ## How "search" works
 
@@ -41,12 +44,16 @@ For any (`from`, `to`, `date`) we generate:
 
 Times and prices are seeded by `hash(airline, route, date)` so refreshing the same search returns the same results. See [`src/lib/flights.ts`](./src/lib/flights.ts).
 
+Current city catalog: **21 airports** across Americas, Europe, Middle East, Asia/Pacific, and Africa — defined in [`src/lib/airlines.ts`](./src/lib/airlines.ts) with both `AIRPORT_LATLNG` (real lat/lng for the Mercator map) and `AIRPORT_MAP_POS` (hand-placed coords for the cartoon map).
+
 ## Project structure
 
 ```
 src/
 ├── app/
-│   ├── page.tsx                          # home with hero + search form
+│   ├── layout.tsx
+│   ├── page.tsx                          # home: hero + search form + popular routes + carriers
+│   ├── globals.css                       # Tailwind v4 + custom kid-friendly animations
 │   ├── flights/
 │   │   ├── page.tsx                      # results (search params drive it)
 │   │   └── [id]/page.tsx                 # single flight detail
@@ -57,16 +64,22 @@ src/
 │           ├── payment/
 │           │   ├── page.tsx
 │           │   └── PaymentForm.tsx
-│           └── confirmation/page.tsx
+│           └── confirmation/page.tsx     # booking ref + confetti burst
 ├── components/
-│   ├── SearchForm.tsx                    # used on home + results
+│   ├── Header.tsx                        # sticky top nav
+│   ├── SearchForm.tsx                    # picker-mode toggle + form state
+│   ├── WorldMapPicker.tsx                # 🎨 cartoon SVG world map
+│   ├── RealWorldMapPicker.tsx            # 🗺️ d3-geo Mercator + great-circle arc
+│   ├── BouncyCounter.tsx                 # +/- traveler counter
+│   ├── ConfettiBurst.tsx                 # canvas-confetti wrapper for the success page
 │   ├── FlightCard.tsx
 │   ├── FilterSidebar.tsx
-│   └── AirlineLogo.tsx
+│   ├── AirlineLogo.tsx
+│   └── icons.tsx                         # SVG icons + Hoppy mascot + drifting plane
 └── lib/
-    ├── airlines.ts                       # AIRLINES, AIRPORTS data tables
+    ├── airlines.ts                       # AIRLINES, AIRPORTS, AIRPORT_LATLNG, AIRPORT_MAP_POS
     ├── flights.ts                        # searchFlights() + findFlight()
-    └── format.ts                         # price/duration/time formatters
+    └── format.ts                         # price / duration / time formatters
 ```
 
 ## Swapping mock data for a real API
@@ -75,6 +88,7 @@ The single seam to replace is `searchFlights()` / `findFlight()` in [`src/lib/fl
 
 ## Next steps
 
+- [ ] Scale the airport catalog from ~21 to 1,200+ international airports (requires a zoomable / clustered map — see "Map at scale" below)
 - [ ] Round-trip / multi-city search
 - [ ] Real airport search (typeahead) instead of dropdown
 - [ ] Seat selection in the booking flow
@@ -87,6 +101,8 @@ The single seam to replace is `searchFlights()` / `findFlight()` in [`src/lib/fl
 - [React 19.2](https://react.dev)
 - [Tailwind CSS v4](https://tailwindcss.com)
 - TypeScript
+- [d3-geo](https://github.com/d3/d3-geo) + [topojson-client](https://github.com/topojson/topojson-client) + [world-atlas](https://github.com/topojson/world-atlas) — real-world Mercator map
+- [canvas-confetti](https://github.com/catdad/canvas-confetti) — booking-confirmation celebration
 
 ## Heads up — Next.js 16 vs. older docs
 
