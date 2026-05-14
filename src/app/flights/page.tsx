@@ -3,6 +3,7 @@ import { searchFlights, type Flight } from "@/lib/flights";
 import FlightCard from "@/components/FlightCard";
 import FilterSidebar, { type Filters } from "@/components/FilterSidebar";
 import SearchForm from "@/components/SearchForm";
+import Header from "@/components/Header";
 
 type SearchParams = {
   from?: string;
@@ -64,7 +65,8 @@ export default async function FlightsPage({
 
   return (
     <div className="flex-1 bg-zinc-50 dark:bg-zinc-950">
-      <header className="border-b border-zinc-200 bg-white px-6 py-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <Header />
+      <div className="border-b border-zinc-200 bg-white px-6 py-6 dark:border-zinc-800 dark:bg-zinc-900">
         <div className="mx-auto max-w-6xl">
           <SearchForm
             initial={{
@@ -74,10 +76,9 @@ export default async function FlightsPage({
               cabin,
               passengers: String(passengers),
             }}
-            compact
           />
         </div>
-      </header>
+      </div>
 
       <main className="mx-auto max-w-6xl px-6 py-8">
         <div className="mb-6">

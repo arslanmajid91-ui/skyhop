@@ -6,13 +6,18 @@ export type Airline = {
   hub: string;
   /** Brand accent color (Tailwind-friendly hex) */
   color: string;
+  /** Public airline logo CDN */
+  logoUrl: string;
 };
 
+const logo = (iata: AirlineCode) =>
+  `https://images.kiwi.com/airlines/64x64/${iata}.png`;
+
 export const AIRLINES: Record<AirlineCode, Airline> = {
-  EK: { code: "EK", name: "Emirates", hub: "DXB", color: "#d71921" },
-  EY: { code: "EY", name: "Etihad Airways", hub: "AUH", color: "#bd8b41" },
-  QR: { code: "QR", name: "Qatar Airways", hub: "DOH", color: "#5c0a32" },
-  TK: { code: "TK", name: "Turkish Airlines", hub: "IST", color: "#c70a0c" },
+  EK: { code: "EK", name: "Emirates",         hub: "DXB", color: "#d71921", logoUrl: logo("EK") },
+  EY: { code: "EY", name: "Etihad Airways",   hub: "AUH", color: "#bd8b41", logoUrl: logo("EY") },
+  QR: { code: "QR", name: "Qatar Airways",    hub: "DOH", color: "#5c0a32", logoUrl: logo("QR") },
+  TK: { code: "TK", name: "Turkish Airlines", hub: "IST", color: "#c70a0c", logoUrl: logo("TK") },
 };
 
 export const AIRLINE_LIST: Airline[] = Object.values(AIRLINES);

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { findFlight } from "@/lib/flights";
 import { formatPrice } from "@/lib/format";
 import PaymentForm from "./PaymentForm";
+import Header from "@/components/Header";
 
 export default async function PaymentPage({
   params,
@@ -15,6 +16,7 @@ export default async function PaymentPage({
 
   return (
     <div className="flex-1 bg-zinc-50 dark:bg-zinc-950">
+      <Header />
       <main className="mx-auto max-w-3xl px-6 py-10">
         <Link
           href={`/book/${encodeURIComponent(flight.id)}`}

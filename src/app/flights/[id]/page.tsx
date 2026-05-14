@@ -4,6 +4,7 @@ import { AIRLINES, AIRPORTS } from "@/lib/airlines";
 import { findFlight } from "@/lib/flights";
 import { formatDate, formatDuration, formatPrice, formatTime } from "@/lib/format";
 import AirlineLogo from "@/components/AirlineLogo";
+import Header from "@/components/Header";
 
 export default async function FlightDetailPage({
   params,
@@ -19,6 +20,7 @@ export default async function FlightDetailPage({
 
   return (
     <div className="flex-1 bg-zinc-50 dark:bg-zinc-950">
+      <Header />
       <main className="mx-auto max-w-4xl px-6 py-10">
         <Link
           href="/flights"

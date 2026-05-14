@@ -22,5 +22,174 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* ---------- search form fields ------------------------------------------ */
+
+.fun-field {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1.5px solid rgb(228 228 231);
+  background-color: white;
+  padding: 0.75rem 2.25rem 0.75rem 0.875rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: rgb(24 24 27);
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23a1a1aa' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.6' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+  background-position: right 0.5rem center;
+  background-repeat: no-repeat;
+  background-size: 1.25rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+input.fun-field {
+  background-image: none;
+  padding-right: 0.875rem;
+}
+.fun-field:hover {
+  border-color: rgb(186 230 253);
+}
+.fun-field:focus {
+  border-color: rgb(14 165 233);
+  box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.18);
+  transform: translateY(-1px);
+}
+@media (prefers-color-scheme: dark) {
+  .fun-field {
+    border-color: rgb(63 63 70);
+    background-color: rgb(24 24 27);
+    color: rgb(244 244 245);
+  }
+  .fun-field:hover {
+    border-color: rgb(14 165 233);
+  }
+}
+
+/* ---------- plane-shaped CTA -------------------------------------------- */
+
+.plane-cta {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.95rem 1.6rem;
+  border-radius: 9999px;
+  background: linear-gradient(95deg, #f97316 0%, #ec4899 50%, #a855f7 100%);
+  background-size: 200% 100%;
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow:
+    0 10px 30px -8px rgba(236, 72, 153, 0.55),
+    0 4px 10px -4px rgba(168, 85, 247, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  transition: transform 0.2s ease, background-position 0.6s ease, box-shadow 0.25s ease;
+  overflow: hidden;
+}
+.plane-cta::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 80% at 20% 10%, rgba(255,255,255,0.35), transparent 50%);
+  pointer-events: none;
+}
+.plane-cta:hover {
+  transform: translateY(-2px) scale(1.03);
+  background-position: 100% 0;
+  box-shadow:
+    0 16px 40px -10px rgba(236, 72, 153, 0.7),
+    0 6px 16px -6px rgba(168, 85, 247, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.plane-cta:active {
+  transform: translateY(0) scale(0.98);
+}
+.plane-cta__plane {
+  display: inline-flex;
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.plane-cta:hover .plane-cta__plane {
+  transform: translate(6px, -4px) rotate(-12deg);
+}
+.plane-cta__label {
+  position: relative;
+}
+
+/* ---------- floating plane in hero -------------------------------------- */
+
+@keyframes plane-drift {
+  0%   { transform: translate3d(-15vw, 10vh, 0) rotate(-6deg); opacity: 0; }
+  10%  { opacity: 0.55; }
+  50%  { transform: translate3d(45vw, -2vh, 0) rotate(-3deg); opacity: 0.55; }
+  90%  { opacity: 0.55; }
+  100% { transform: translate3d(110vw, 6vh, 0) rotate(-6deg); opacity: 0; }
+}
+.plane-drift {
+  position: absolute;
+  top: 30%;
+  left: 0;
+  width: 56px;
+  height: 56px;
+  color: rgba(255,255,255,0.95);
+  animation: plane-drift 22s linear infinite;
+  filter: drop-shadow(0 6px 14px rgba(0,0,0,0.18));
+  pointer-events: none;
+}
+
+/* ---------- floating clouds / orbs in hero ------------------------------ */
+
+@keyframes float-orb {
+  0%   { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(20px, -10px) scale(1.08); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+.float-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.55;
+  animation: float-orb 10s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ---------- shimmering gradient text ------------------------------------ */
+
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+.gradient-text {
+  background: linear-gradient(90deg, #fef3c7, #fbcfe8, #c7d2fe, #fef3c7);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gradient-shift 8s ease-in-out infinite;
+}
+
+/* ---------- pill chip hover --------------------------------------------- */
+
+.route-chip {
+  position: relative;
+  overflow: hidden;
+}
+.route-chip::after {
+  content: "→";
+  position: absolute;
+  right: 0.9rem;
+  top: 50%;
+  transform: translate(8px, -50%);
+  opacity: 0;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+.route-chip:hover::after {
+  transform: translate(0, -50%);
+  opacity: 1;
+}
+.route-chip:hover {
+  padding-right: 2.25rem !important;
 }

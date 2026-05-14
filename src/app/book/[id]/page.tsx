@@ -4,6 +4,7 @@ import { AIRLINES, AIRPORTS } from "@/lib/airlines";
 import { findFlight } from "@/lib/flights";
 import { formatPrice, formatTime } from "@/lib/format";
 import PassengerForm from "./PassengerForm";
+import Header from "@/components/Header";
 
 export default async function BookingPage({
   params,
@@ -19,6 +20,7 @@ export default async function BookingPage({
 
   return (
     <div className="flex-1 bg-zinc-50 dark:bg-zinc-950">
+      <Header />
       <main className="mx-auto max-w-5xl px-6 py-10">
         <Link
           href={`/flights/${encodeURIComponent(flight.id)}`}

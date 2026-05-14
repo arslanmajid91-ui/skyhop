@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { AIRLINES, AIRPORTS } from "@/lib/airlines";
 import { findFlight } from "@/lib/flights";
 import { formatDate, formatPrice, formatTime } from "@/lib/format";
+import Header from "@/components/Header";
 
 function bookingRef(id: string): string {
   // Six-char A-Z + 0-9, deterministic from id
@@ -33,6 +34,7 @@ export default async function ConfirmationPage({
 
   return (
     <div className="flex-1 bg-zinc-50 dark:bg-zinc-950">
+      <Header />
       <main className="mx-auto max-w-2xl px-6 py-12">
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center dark:border-emerald-900 dark:bg-emerald-950">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-600 text-white">
