@@ -278,7 +278,10 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
         <div className="flex gap-1.5">
           <button
             type="button"
-            onClick={() => setMode("from")}
+            onClick={() => {
+              setMode("from");
+              resetView();
+            }}
             className={
               "rounded-full px-3 py-1.5 text-xs font-bold transition " +
               (mode === "from"
