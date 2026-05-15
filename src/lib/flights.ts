@@ -2,7 +2,7 @@ import {
   AIRLINES,
   AIRPORTS,
   AIRLINE_LIST,
-  findRoute,
+  airlineServes,
   type AirlineCode,
 } from "./airlines";
 
@@ -171,15 +171,15 @@ function buildDirect(
 function buildOneStop(
   airline: AirlineCode,
   from: string,
-  via: string,
   to: string,
   date: string,
   cabin: CabinClass,
   departureMin: number,
   rng: () => number,
 ): Flight {
-  const leg1Duration = approxFlightMinutes(from, via);
-  const leg2Duration = approxFlightMinutes(via, to);
+  const hub = AIRLINES[airline].hub;
+  const leg1Duration = approxFlightMinutes(from, hub);
+  const leg2Duration = approxFlightMinutes(hub, to);
   const layoverMin = 90 + Math.floor(rng() * 180);
 
   const leg1End = departureMin + leg1Duration;
@@ -188,7 +188,7 @@ function buildOneStop(
 
   const seg1: Segment = {
     from,
-    to: via,
+    to: hub,
     departure: minutesToIso(date, departureMin),
     arrival: minutesToIso(date, leg1End),
     duration: leg1Duration,
@@ -196,7 +196,7 @@ function buildOneStop(
     aircraft: aircraftFor(airline, rng),
   };
   const seg2: Segment = {
-    from: via,
+    from: hub,
     to,
     departure: minutesToIso(date, leg2Start),
     arrival: minutesToIso(date, leg2End),
@@ -207,7 +207,7 @@ function buildOneStop(
 
   const totalDuration = leg2End - departureMin;
   return {
-    id: `${airline}-${from}-${via}-${to}-${date}-${departureMin}-${cabin}`,
+    id: `${airline}-${from}-${hub}-${to}-${date}-${departureMin}-${cabin}`,
     airline,
     segments: [seg1, seg2],
     totalDuration,
@@ -240,30 +240,33 @@ export function searchFlights(query: SearchQuery): Flight[] {
   const flights: Flight[] = [];
 
   for (const airline of AIRLINE_LIST) {
-    const route = findRoute(airline.code, from, to);
-    if (!route) continue;
+    if (!airlineServes(airline.code, from) || !airlineServes(airline.code, to)) {
+      continue;
+    }
+    const hub = airline.hub;
+    const isDirectRoute = from === hub || to === hub;
 
     // Seed per (airline, route, date) so identical searches return identical
     // results, but each carrier/route gets its own offering.
     const seed = hashString(`${airline.code}|${from}-${to}|${date}`);
     const rng = makeRng(seed);
 
-    if (route.type === "direct") {
-      // Direct routes get two daily options.
-      for (let i = 0; i < 2; i++) {
-        const depMin = 360 + Math.floor(rng() * 800); // ~06:00 to ~19:20
+    const offerings = isDirectRoute ? 2 : 1; // direct routes get 2 nonstop options
+    for (let i = 0; i < offerings; i++) {
+      // Spread departures across the day
+      const depMin = 360 + Math.floor(rng() * 800); // ~06:00 to ~19:20
+      if (isDirectRoute) {
         flights.push(buildDirect(airline.code, from, to, date, cabin, depMin, rng));
+      } else {
+        flights.push(buildOneStop(airline.code, from, to, date, cabin, depMin, rng));
       }
-    } else {
-      // 1-stop via the resolved waypoint. Two options at different times.
-      const depMin1 = 360 + Math.floor(rng() * 800);
-      flights.push(
-        buildOneStop(airline.code, from, route.via, to, date, cabin, depMin1, rng)
-      );
-      const depMin2 = 900 + Math.floor(rng() * 360); // ~15:00 to ~21:00
-      flights.push(
-        buildOneStop(airline.code, from, route.via, to, date, cabin, depMin2, rng)
-      );
+    }
+
+    // For non-hub origins/dests, also generate a 1-stop alternative at
+    // different time to give choice.
+    if (!isDirectRoute) {
+      const depMin = 900 + Math.floor(rng() * 360); // ~15:00 to ~21:00
+      flights.push(buildOneStop(airline.code, from, to, date, cabin, depMin, rng));
     }
   }
 
