@@ -24,6 +24,18 @@ const MIN_K = 1;
 const MAX_K = 8;
 const CLUSTER_RADIUS_PX = 55;
 
+// Continent label centroids (lng, lat). Placed by eye on the Mercator
+// projection — not geographic centroids, just visually balanced positions
+// over the largest continental landmass.
+const CONTINENT_LABELS: Array<{ name: string; lng: number; lat: number }> = [
+  { name: "North America", lng: -100, lat: 45 },
+  { name: "South America", lng: -60, lat: -15 },
+  { name: "Europe", lng: 18, lat: 54 },
+  { name: "Africa", lng: 22, lat: 5 },
+  { name: "Asia", lng: 95, lat: 45 },
+  { name: "Oceania", lng: 135, lat: -25 },
+];
+
 type AirportProps = { code: string; city: string };
 
 /**
@@ -377,6 +389,40 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
                     vectorEffect="non-scaling-stroke"
                     strokeWidth="0.8"
                   />
+                );
+              })}
+            </g>
+
+            {/* Continent labels — sized in screen space, fade out as the
+                user zooms in past continent-level so they don't clutter
+                country / city views. */}
+            <g pointerEvents="none">
+              {CONTINENT_LABELS.map((c) => {
+                const xy = projection([c.lng, c.lat]);
+                if (!xy) return null;
+                const opacity = Math.max(0, 1 - (k - 1) / 2.5);
+                if (opacity <= 0) return null;
+                return (
+                  <text
+                    key={c.name}
+                    x={xy[0]}
+                    y={xy[1]}
+                    textAnchor="middle"
+                    fontSize={18 / k}
+                    fontWeight="700"
+                    letterSpacing={3 / k}
+                    fill="#92400e"
+                    opacity={opacity}
+                    style={{
+                      paintOrder: "stroke",
+                      stroke: "#fef3c7",
+                      strokeWidth: 4 / k,
+                      strokeLinejoin: "round",
+                      userSelect: "none",
+                    }}
+                  >
+                    {c.name.toUpperCase()}
+                  </text>
                 );
               })}
             </g>
