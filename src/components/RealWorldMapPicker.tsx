@@ -96,10 +96,10 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
     return index.getClusters([-180, -85, 180, 85], kToClusterZoom(transform.k));
   }, [index, transform.k]);
 
-  // Selected from/to should never disappear inside a cluster. Build a set of
-  // codes that are currently part of a (real) cluster — if either selection
-  // sits inside one, we drop that cluster and render every airport in it as
-  // a solo pin instead. Keeps the active route always visible.
+  // At any zoom: clusters render as clusters (never exploded), and the
+  // selected FROM / TO are always rendered as solo pins on top of whatever
+  // cluster they'd be inside — so the active route stays visible without
+  // dumping hundreds of leaves at low zoom.
   const { soloPoints, displayedClusters } = useMemo(() => {
     const solos: Array<{ code: string; city: string; x: number; y: number }> = [];
     const clusters: Array<{
@@ -116,42 +116,35 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
       const xy = projection([lng, lat]);
       if (!xy) continue;
       const [x, y] = xy;
-
       const props = f.properties as { cluster?: boolean; cluster_id?: number; point_count?: number } & AirportProps;
       if (props.cluster) {
-        const clusterId = (f as ClusterFeature<AirportProps>).properties.cluster_id;
-        const leaves = index.getLeaves(clusterId, Infinity) as PointFeature<AirportProps>[];
-        const hasSelected = leaves.some(
-          (l) => l.properties.code === from || l.properties.code === to
-        );
-        if (hasSelected) {
-          // Explode this cluster into solo pins so from/to remain visible.
-          for (const l of leaves) {
-            const lxy = projection(l.geometry.coordinates as [number, number]);
-            if (!lxy) continue;
-            solos.push({
-              code: l.properties.code,
-              city: l.properties.city,
-              x: lxy[0],
-              y: lxy[1],
-            });
-          }
-        } else {
-          clusters.push({
-            id: clusterId,
-            count: props.point_count ?? leaves.length,
-            x,
-            y,
-            lng,
-            lat,
-          });
-        }
+        clusters.push({
+          id: (f as ClusterFeature<AirportProps>).properties.cluster_id,
+          count: props.point_count ?? 0,
+          x,
+          y,
+          lng,
+          lat,
+        });
       } else {
         solos.push({ code: props.code, city: props.city, x, y });
       }
     }
+
+    // Force-include FROM and TO as solo pins (overlaid on any cluster that
+    // contains them) so the user's selection is always visible at any zoom.
+    for (const code of [from, to]) {
+      if (!code) continue;
+      if (solos.some((p) => p.code === code)) continue;
+      const ll = AIRPORT_LATLNG[code];
+      if (!ll) continue;
+      const xy = projection(ll);
+      if (!xy) continue;
+      solos.push({ code, city: AIRPORTS[code]?.city ?? code, x: xy[0], y: xy[1] });
+    }
+
     return { soloPoints: solos, displayedClusters: clusters };
-  }, [clusterFeatures, projection, index, from, to]);
+  }, [clusterFeatures, projection, from, to]);
 
   // --- d3-zoom wiring --------------------------------------------------------
   useEffect(() => {
