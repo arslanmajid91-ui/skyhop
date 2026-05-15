@@ -17,7 +17,7 @@ export default function SearchForm({
   const router = useRouter();
   const [from, setFrom] = useState(initial?.from ?? "JFK");
   const [to, setTo] = useState(initial?.to ?? "DXB");
-  const [date, setDate] = useState(initial?.date ?? today);
+  const [date, setDate] = useState(initial?.date ?? "");
   const [cabin, setCabin] = useState(initial?.cabin ?? "economy");
   const [passengers, setPassengers] = useState(initial?.passengers ?? "1");
   const [error, setError] = useState("");
@@ -31,7 +31,10 @@ export default function SearchForm({
       return;
     }
     setError("");
-    const params = new URLSearchParams({ from, to, date, cabin, passengers });
+    // Date is optional — flights page falls back to today if missing.
+    const paramsObj: Record<string, string> = { from, to, cabin, passengers };
+    if (date) paramsObj.date = date;
+    const params = new URLSearchParams(paramsObj);
     router.push(`/flights?${params.toString()}`);
   }
 
@@ -127,14 +130,15 @@ export default function SearchForm({
           </FunField>
         )}
 
-        {/* DATE */}
-        <FunField label="Departure" icon={<CalIcon />} accent="from-violet-500 to-fuchsia-500">
+        {/* DATE — optional; flights page defaults to today if empty */}
+        <FunField label="Departure (optional)" icon={<CalIcon />} accent="from-violet-500 to-fuchsia-500">
           <input
             type="date"
             className="fun-field"
             value={date}
             min={today}
             onChange={(e) => setDate(e.target.value)}
+            placeholder="Any date"
           />
         </FunField>
 

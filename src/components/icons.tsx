@@ -61,6 +61,124 @@ export function MinusIcon({ className = "" }: { className?: string }) {
   );
 }
 
+/**
+ * Stylized top-down view of an Airbus A380 — the largest passenger
+ * aircraft in the world and the flagship of three of skyhop's four
+ * carriers (EK, EY, QR all fly the A380). Colors are tuned to the
+ * hero gradient: cream fuselage, indigo→fuchsia gradient wings,
+ * sky-blue cockpit, dark navy engines.
+ */
+export function A380Plane({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 240 200" className={className} xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="a380-body" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#fef9c3" />
+          <stop offset="50%" stopColor="#ffffff" />
+          <stop offset="100%" stopColor="#fde68a" />
+        </linearGradient>
+        <linearGradient id="a380-wing" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#818cf8" />
+          <stop offset="60%" stopColor="#c084fc" />
+          <stop offset="100%" stopColor="#f472b6" />
+        </linearGradient>
+        <radialGradient id="a380-glow" cx="50%" cy="50%" r="55%">
+          <stop offset="0%" stopColor="#fde68a" stopOpacity="0.35" />
+          <stop offset="100%" stopColor="#fde68a" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+
+      {/* Soft halo */}
+      <ellipse cx="120" cy="100" rx="120" ry="95" fill="url(#a380-glow)" />
+
+      {/* Main wings (delta, swept back) — top */}
+      <path
+        d="M 150 92 L 80 92 L 38 30 L 55 30 Z"
+        fill="url(#a380-wing)"
+        stroke="#1e1b4b"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      {/* Main wings — bottom */}
+      <path
+        d="M 150 108 L 80 108 L 38 170 L 55 170 Z"
+        fill="url(#a380-wing)"
+        stroke="#1e1b4b"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+
+      {/* Horizontal stabilizers at tail */}
+      <path
+        d="M 35 94 L 12 64 L 25 64 L 50 94 Z"
+        fill="url(#a380-wing)"
+        stroke="#1e1b4b"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M 35 106 L 12 136 L 25 136 L 50 106 Z"
+        fill="url(#a380-wing)"
+        stroke="#1e1b4b"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+
+      {/* Vertical stabilizer (visible as a small fin atop the rear fuselage) */}
+      <path
+        d="M 28 100 L 18 88 L 18 112 Z"
+        fill="#4c1d95"
+        stroke="#1e1b4b"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+
+      {/* Fuselage */}
+      <path
+        d="M 22 100 Q 22 91 32 90 L 200 90 Q 220 90 224 100 Q 220 110 200 110 L 32 110 Q 22 109 22 100 Z"
+        fill="url(#a380-body)"
+        stroke="#1e1b4b"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+
+      {/* Cockpit windscreen */}
+      <path
+        d="M 200 94 Q 218 94 222 100 Q 218 106 200 106 Z"
+        fill="#0ea5e9"
+        opacity="0.85"
+        stroke="#1e1b4b"
+        strokeWidth="1.2"
+      />
+
+      {/* Window strip — twin rows hint at the A380's iconic double deck */}
+      <g fill="#0c4a6e" opacity="0.55">
+        {[58, 72, 86, 100, 114, 128, 142, 156, 170, 184].map((x) => (
+          <rect key={`top-${x}`} x={x} y="95" width="6" height="2" rx="1" />
+        ))}
+        {[58, 72, 86, 100, 114, 128, 142, 156, 170, 184].map((x) => (
+          <rect key={`bot-${x}`} x={x} y="103" width="6" height="2" rx="1" />
+        ))}
+      </g>
+
+      {/* Engines — 4 on wings (inner + outer, both sides) */}
+      <g stroke="#1e1b4b" strokeWidth="1.5">
+        <ellipse cx="125" cy="58" rx="11" ry="5.5" fill="#312e81" />
+        <ellipse cx="92" cy="46" rx="11" ry="5.5" fill="#312e81" />
+        <ellipse cx="125" cy="142" rx="11" ry="5.5" fill="#312e81" />
+        <ellipse cx="92" cy="154" rx="11" ry="5.5" fill="#312e81" />
+      </g>
+      {/* Engine intake highlights */}
+      <g fill="#fbbf24">
+        <circle cx="135" cy="58" r="2.5" />
+        <circle cx="102" cy="46" r="2.5" />
+        <circle cx="135" cy="142" r="2.5" />
+        <circle cx="102" cy="154" r="2.5" />
+      </g>
+    </svg>
+  );
+}
+
 // Hoppy the smiling mascot airplane — used on the hero & confirmation page.
 export function MascotPlane({ className = "" }: { className?: string }) {
   return (

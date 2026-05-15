@@ -3,7 +3,7 @@ import Header from "@/components/Header";
 import SearchForm from "@/components/SearchForm";
 import AirlineLogo from "@/components/AirlineLogo";
 import { AIRLINE_LIST, AIRPORT_LIST } from "@/lib/airlines";
-import { PlaneCruiseIcon, MascotPlane } from "@/components/icons";
+import { PlaneCruiseIcon, A380Plane } from "@/components/icons";
 
 const POPULAR_ROUTES: { from: string; to: string; label: string; emoji: string }[] = [
   { from: "JFK", to: "DXB", label: "New York → Dubai",       emoji: "🌃" },
@@ -74,14 +74,14 @@ export default function Home() {
           {/* Cruising airplane that drifts across the hero */}
           <PlaneCruiseIcon className="plane-drift" />
 
-          {/* Mascot — Hoppy the smiling plane (right side, hidden on mobile) */}
-          <MascotPlane className="mascot-bob pointer-events-none absolute right-8 top-16 hidden h-32 w-32 md:block lg:right-16 lg:top-20 lg:h-44 lg:w-44" />
+          {/* Hero A380 (right side, hidden on mobile) */}
+          <A380Plane className="mascot-bob pointer-events-none absolute right-4 top-12 hidden h-40 w-40 md:block lg:right-12 lg:top-16 lg:h-56 lg:w-56" />
 
           {/* Headline */}
           <div className="relative mx-auto max-w-3xl text-center">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium backdrop-blur">
               <span className="text-base">🛩️</span>
-              <span>{AIRLINE_LIST.length} carriers · {AIRPORT_LIST.length} cities worldwide</span>
+              <span>{AIRLINE_LIST.length} carriers · across {AIRPORT_LIST.length} international airports</span>
             </div>
             <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl">
               Where to{" "}
