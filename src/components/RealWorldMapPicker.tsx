@@ -36,6 +36,7 @@ type AirportProps = { code: string; city: string };
 export default function RealWorldMapPicker({ from, to, onChange }: Props) {
   const [mode, setMode] = useState<"from" | "to">("from");
   const [transform, setTransform] = useState<ZoomTransform>(zoomIdentity);
+  const [hovered, setHovered] = useState<string | null>(null);
 
   const svgRef = useRef<SVGSVGElement | null>(null);
   const zoomBehaviorRef = useRef<ZoomBehavior<SVGSVGElement, unknown> | null>(null);
@@ -421,7 +422,7 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
               const radius = Math.min(20, 11 + Math.log2(c.count) * 2.6) / k;
               const fontSize = Math.min(14, 10 + Math.log2(c.count) * 1.4) / k;
               return (
-                <g key={`c-${c.id}`} transform={`translate(${c.x} ${c.y})`} className="cursor-pointer">
+                <g key={`c-${c.id}`} transform={`translate(${c.x.toFixed(3)} ${c.y.toFixed(3)})`} className="cursor-pointer">
                   <circle r={radius * 1.55} fill="#a855f7" opacity="0.18" pointerEvents="none" />
                   <circle
                     r={radius}
@@ -465,12 +466,16 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
               const color = isFrom ? "#0ea5e9" : isTo ? "#f97316" : "#1e293b";
               const baseR = isActive ? 7 : 4.5;
               return (
-                <g key={a.code} transform={`translate(${a.x} ${a.y})`} className="cursor-pointer">
+                <g key={a.code} transform={`translate(${a.x.toFixed(3)} ${a.y.toFixed(3)})`} className="cursor-pointer">
                   {isActive && <circle r={22 / k} fill={glow} pointerEvents="none" />}
                   <circle
                     r={18 / k}
                     fill="transparent"
                     data-skyhop-interactive
+                    onPointerEnter={() => setHovered(a.code)}
+                    onPointerLeave={() =>
+                      setHovered((h) => (h === a.code ? null : h))
+                    }
                     onClick={(e) => {
                       e.stopPropagation();
                       pickAirport(a.code);
@@ -479,14 +484,14 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
                     <title>{`${a.code} — ${a.city}`}</title>
                   </circle>
                   <circle
-                    r={baseR / k}
+                    r={(hovered === a.code ? baseR * 1.5 : baseR) / k}
                     fill={color}
                     stroke="#ffffff"
                     strokeWidth={2 / k}
                     pointerEvents="none"
-                    style={{ transition: "fill 0.2s ease" }}
+                    style={{ transition: "r 0.15s ease, fill 0.2s ease" }}
                   />
-                  {isActive && (
+                  {(isActive || hovered === a.code) && (
                     <text
                       x="0"
                       y={labelOffsetY}
@@ -502,7 +507,7 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
                         strokeLinejoin: "round",
                       }}
                     >
-                      {a.code}
+                      {isActive ? a.code : `${a.code} · ${a.city}`}
                     </text>
                   )}
                 </g>
