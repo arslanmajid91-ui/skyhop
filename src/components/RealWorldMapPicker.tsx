@@ -28,12 +28,12 @@ const CLUSTER_RADIUS_PX = 55;
 // projection — not geographic centroids, just visually balanced positions
 // over the largest continental landmass.
 const CONTINENT_LABELS: Array<{ name: string; lng: number; lat: number }> = [
-  { name: "North America", lng: -100, lat: 45 },
-  { name: "South America", lng: -60, lat: -15 },
-  { name: "Europe", lng: 18, lat: 54 },
-  { name: "Africa", lng: 22, lat: 5 },
-  { name: "Asia", lng: 95, lat: 45 },
-  { name: "Oceania", lng: 135, lat: -25 },
+  { name: "North America", lng: -95, lat: 42 },
+  { name: "South America", lng: -58, lat: -12 },
+  { name: "Europe", lng: 12, lat: 52 },
+  { name: "Africa", lng: 22, lat: 3 },
+  { name: "Asia", lng: 90, lat: 42 },
+  { name: "Oceania", lng: 134, lat: -27 },
 ];
 
 type AirportProps = { code: string; city: string };
@@ -393,14 +393,14 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
               })}
             </g>
 
-            {/* Continent labels — sized in screen space, fade out as the
-                user zooms in past continent-level so they don't clutter
-                country / city views. */}
+            {/* Continent labels — small, faded; fade out fully as the user
+                zooms in past continent-level so they never clutter country
+                or city views. */}
             <g pointerEvents="none">
               {CONTINENT_LABELS.map((c) => {
                 const xy = projection([c.lng, c.lat]);
                 if (!xy) return null;
-                const opacity = Math.max(0, 1 - (k - 1) / 2.5);
+                const opacity = Math.max(0, 0.45 - (k - 1) * 0.22);
                 if (opacity <= 0) return null;
                 return (
                   <text
@@ -408,15 +408,16 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
                     x={xy[0]}
                     y={xy[1]}
                     textAnchor="middle"
-                    fontSize={18 / k}
+                    dominantBaseline="central"
+                    fontSize={10 / k}
                     fontWeight="700"
-                    letterSpacing={3 / k}
-                    fill="#92400e"
+                    letterSpacing={2 / k}
+                    fill="#78350f"
                     opacity={opacity}
                     style={{
                       paintOrder: "stroke",
                       stroke: "#fef3c7",
-                      strokeWidth: 4 / k,
+                      strokeWidth: 2.5 / k,
                       strokeLinejoin: "round",
                       userSelect: "none",
                     }}
