@@ -4,6 +4,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { geoMercator, geoPath, geoInterpolate } from "d3-geo";
 import { feature } from "topojson-client";
 import type { Feature, FeatureCollection, Geometry } from "geojson";
+import { select } from "d3-selection";
+import "d3-transition";
+import { zoom as d3zoom, zoomIdentity, type ZoomBehavior, type ZoomTransform } from "d3-zoom";
+import Supercluster from "supercluster";
+import type { ClusterFeature, PointFeature } from "supercluster";
 import countries110m from "world-atlas/countries-110m.json";
 import { AIRPORTS, AIRPORT_LIST, AIRPORT_LATLNG } from "@/lib/airlines";
 
@@ -15,30 +20,27 @@ type Props = {
 
 const WIDTH = 1000;
 const HEIGHT = 520;
-const MIN_ZOOM = 1;
-const MAX_ZOOM = 8;
-const DRAG_THRESHOLD_PX = 4;
+const MIN_K = 1;
+const MAX_K = 8;
+const CLUSTER_RADIUS_PX = 55;
+
+type AirportProps = { code: string; city: string };
 
 /**
- * Real-world Mercator-projection map picker with pan + zoom. Built on
- * d3-geo + topojson (world-atlas countries-110m, ~100 kB). At ~150
- * airports the un-zoomed view is dense, so users can scroll-wheel /
- * +- to zoom and drag to pan around to a region of interest.
+ * Real-world Mercator picker. Powered by:
+ *   - d3-geo + topojson (world-atlas) for the projection & coastlines
+ *   - d3-zoom for pan / pinch / wheel / dblclick + smooth programmatic zoom
+ *   - supercluster (KD-tree) for point clustering that stays stable across
+ *     zoom levels and scales cleanly toward 1,000+ airports.
  */
 export default function RealWorldMapPicker({ from, to, onChange }: Props) {
   const [mode, setMode] = useState<"from" | "to">("from");
-  const [view, setView] = useState({ tx: 0, ty: 0, zoom: 1 });
+  const [transform, setTransform] = useState<ZoomTransform>(zoomIdentity);
 
   const svgRef = useRef<SVGSVGElement | null>(null);
-  const dragRef = useRef<{
-    pointerId: number;
-    startX: number;
-    startY: number;
-    startTx: number;
-    startTy: number;
-    moved: boolean;
-  } | null>(null);
+  const zoomBehaviorRef = useRef<ZoomBehavior<SVGSVGElement, unknown> | null>(null);
 
+  // --- Projection + topojson land --------------------------------------------
   const { projection, pathGen, countries } = useMemo(() => {
     const proj = geoMercator()
       .scale(150)
@@ -54,6 +56,129 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
     return { projection: proj, pathGen: pg, countries: fc.features };
   }, []);
 
+  // --- Supercluster index (built once) ---------------------------------------
+  const index = useMemo(() => {
+    const points: PointFeature<AirportProps>[] = [];
+    for (const a of AIRPORT_LIST) {
+      const ll = AIRPORT_LATLNG[a.code];
+      if (!ll) continue;
+      points.push({
+        type: "Feature",
+        properties: { code: a.code, city: a.city },
+        geometry: { type: "Point", coordinates: [ll[0], ll[1]] },
+      });
+    }
+    const sc = new Supercluster<AirportProps>({
+      radius: CLUSTER_RADIUS_PX,
+      maxZoom: 8,
+      minPoints: 2,
+    });
+    sc.load(points);
+    return sc;
+  }, []);
+
+  // Map our continuous d3-zoom k (1-8) to a supercluster integer zoom (0-8).
+  // log2(k)*2 gives 8 discrete clustering levels across our range — enough
+  // resolution that the cluster set changes smoothly as the user zooms.
+  function kToClusterZoom(k: number) {
+    return Math.max(0, Math.min(8, Math.floor(Math.log2(k) * 2)));
+  }
+
+  function clusterZoomToK(z: number) {
+    return Math.max(MIN_K, Math.min(MAX_K, Math.pow(2, z / 2)));
+  }
+
+  // --- Clustering query (runs every transform change) ------------------------
+  const clusterFeatures = useMemo(() => {
+    // We always query the full world bbox — at 150 points it's cheap, and
+    // supercluster's internal KD-tree handles up to ~1.2M points easily.
+    return index.getClusters([-180, -85, 180, 85], kToClusterZoom(transform.k));
+  }, [index, transform.k]);
+
+  // Selected from/to should never disappear inside a cluster. Build a set of
+  // codes that are currently part of a (real) cluster — if either selection
+  // sits inside one, we drop that cluster and render every airport in it as
+  // a solo pin instead. Keeps the active route always visible.
+  const { soloPoints, displayedClusters } = useMemo(() => {
+    const solos: Array<{ code: string; city: string; x: number; y: number }> = [];
+    const clusters: Array<{
+      id: number;
+      count: number;
+      x: number;
+      y: number;
+      lng: number;
+      lat: number;
+    }> = [];
+
+    for (const f of clusterFeatures) {
+      const [lng, lat] = f.geometry.coordinates;
+      const xy = projection([lng, lat]);
+      if (!xy) continue;
+      const [x, y] = xy;
+
+      const props = f.properties as { cluster?: boolean; cluster_id?: number; point_count?: number } & AirportProps;
+      if (props.cluster) {
+        const clusterId = (f as ClusterFeature<AirportProps>).properties.cluster_id;
+        const leaves = index.getLeaves(clusterId, Infinity) as PointFeature<AirportProps>[];
+        const hasSelected = leaves.some(
+          (l) => l.properties.code === from || l.properties.code === to
+        );
+        if (hasSelected) {
+          // Explode this cluster into solo pins so from/to remain visible.
+          for (const l of leaves) {
+            const lxy = projection(l.geometry.coordinates as [number, number]);
+            if (!lxy) continue;
+            solos.push({
+              code: l.properties.code,
+              city: l.properties.city,
+              x: lxy[0],
+              y: lxy[1],
+            });
+          }
+        } else {
+          clusters.push({
+            id: clusterId,
+            count: props.point_count ?? leaves.length,
+            x,
+            y,
+            lng,
+            lat,
+          });
+        }
+      } else {
+        solos.push({ code: props.code, city: props.city, x, y });
+      }
+    }
+    return { soloPoints: solos, displayedClusters: clusters };
+  }, [clusterFeatures, projection, index, from, to]);
+
+  // --- d3-zoom wiring --------------------------------------------------------
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const z = d3zoom<SVGSVGElement, unknown>()
+      .scaleExtent([MIN_K, MAX_K])
+      .translateExtent([
+        [0, 0],
+        [WIDTH, HEIGHT],
+      ])
+      .filter((event) => {
+        // Allow wheel + drag, ignore right-click drag.
+        if (event.type === "mousedown" && event.button !== 0) return false;
+        return !event.ctrlKey || event.type === "wheel";
+      })
+      .on("zoom", (event) => setTransform(event.transform));
+    select(svg).call(z);
+    // Suppress dblclick zoom — we use double-click to nothing currently,
+    // but it can interfere with rapid pin selection.
+    select(svg).on("dblclick.zoom", null);
+    zoomBehaviorRef.current = z;
+    return () => {
+      select(svg).on(".zoom", null);
+      zoomBehaviorRef.current = null;
+    };
+  }, []);
+
   function pickAirport(code: string) {
     if (mode === "from") {
       if (code === to) onChange({ from: code, to: from });
@@ -66,6 +191,40 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
     }
   }
 
+  function zoomTo(targetK: number, worldX: number, worldY: number, duration = 450) {
+    const svg = svgRef.current;
+    const z = zoomBehaviorRef.current;
+    if (!svg || !z) return;
+    const k = Math.max(MIN_K, Math.min(MAX_K, targetK));
+    const tx = WIDTH / 2 - worldX * k;
+    const ty = HEIGHT / 2 - worldY * k;
+    select(svg)
+      .transition()
+      .duration(duration)
+      .call(z.transform, zoomIdentity.translate(tx, ty).scale(k));
+  }
+
+  function expandCluster(clusterId: number, x: number, y: number) {
+    const expansionZ = index.getClusterExpansionZoom(clusterId);
+    const targetK = clusterZoomToK(expansionZ + 1);
+    zoomTo(targetK, x, y);
+  }
+
+  function zoomByFactor(factor: number) {
+    const svg = svgRef.current;
+    const z = zoomBehaviorRef.current;
+    if (!svg || !z) return;
+    select(svg).transition().duration(220).call(z.scaleBy, factor);
+  }
+
+  function resetView() {
+    const svg = svgRef.current;
+    const z = zoomBehaviorRef.current;
+    if (!svg || !z) return;
+    select(svg).transition().duration(300).call(z.transform, zoomIdentity);
+  }
+
+  // --- Flight arc ------------------------------------------------------------
   const arcPath = useMemo(() => {
     const a = AIRPORT_LATLNG[from];
     const b = AIRPORT_LATLNG[to];
@@ -81,111 +240,25 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
     return d;
   }, [from, to, projection]);
 
-  // Convert a client (mouse) position into viewBox/world space.
-  function clientToViewBox(clientX: number, clientY: number) {
-    const svg = svgRef.current;
-    if (!svg) return { x: 0, y: 0 };
-    const rect = svg.getBoundingClientRect();
-    const x = ((clientX - rect.left) / rect.width) * WIDTH;
-    const y = ((clientY - rect.top) / rect.height) * HEIGHT;
-    return { x, y };
-  }
+  // Projected endpoints — used for the arc gradient and as a fallback for
+  // the plane glyph when the arc is missing.
+  const fromXY = useMemo(() => {
+    const ll = AIRPORT_LATLNG[from];
+    return ll ? projection(ll) : null;
+  }, [from, projection]);
+  const toXY = useMemo(() => {
+    const ll = AIRPORT_LATLNG[to];
+    return ll ? projection(ll) : null;
+  }, [to, projection]);
 
-  function clampView(next: { tx: number; ty: number; zoom: number }) {
-    const z = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, next.zoom));
-    // The transformed map covers screen rect (tx, ty) → (tx + WIDTH*z, ty + HEIGHT*z).
-    // Keep at least the full viewbox covered.
-    const minTx = WIDTH - WIDTH * z;
-    const maxTx = 0;
-    const minTy = HEIGHT - HEIGHT * z;
-    const maxTy = 0;
-    return {
-      tx: Math.min(maxTx, Math.max(minTx, next.tx)),
-      ty: Math.min(maxTy, Math.max(minTy, next.ty)),
-      zoom: z,
-    };
-  }
-
-  function zoomAt(clientX: number, clientY: number, factor: number) {
-    const { x: sx, y: sy } = clientToViewBox(clientX, clientY);
-    setView((v) => {
-      const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, v.zoom * factor));
-      if (newZoom === v.zoom) return v;
-      // Keep the world point under cursor stationary.
-      // screen = world * zoom + t  ⇒  t' = screen - world * newZoom
-      const wx = (sx - v.tx) / v.zoom;
-      const wy = (sy - v.ty) / v.zoom;
-      return clampView({
-        tx: sx - wx * newZoom,
-        ty: sy - wy * newZoom,
-        zoom: newZoom,
-      });
-    });
-  }
-
-  // React's onWheel is passive by default — can't preventDefault page-scroll
-  // from there. Attach a native non-passive listener on the SVG.
-  useEffect(() => {
-    const svg = svgRef.current;
-    if (!svg) return;
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      const factor = Math.exp(-e.deltaY * 0.0015);
-      zoomAt(e.clientX, e.clientY, factor);
-    };
-    svg.addEventListener("wheel", onWheel, { passive: false });
-    return () => svg.removeEventListener("wheel", onWheel);
-  }, []);
-
-  function onPointerDown(e: React.PointerEvent<SVGSVGElement>) {
-    // Ignore non-primary buttons.
-    if (e.button !== 0) return;
-    (e.currentTarget as SVGSVGElement).setPointerCapture(e.pointerId);
-    dragRef.current = {
-      pointerId: e.pointerId,
-      startX: e.clientX,
-      startY: e.clientY,
-      startTx: view.tx,
-      startTy: view.ty,
-      moved: false,
-    };
-  }
-
-  function onPointerMove(e: React.PointerEvent<SVGSVGElement>) {
-    const d = dragRef.current;
-    if (!d || d.pointerId !== e.pointerId) return;
-    const rect = svgRef.current!.getBoundingClientRect();
-    const sx = (WIDTH / rect.width) * (e.clientX - d.startX);
-    const sy = (HEIGHT / rect.height) * (e.clientY - d.startY);
-    if (!d.moved && Math.hypot(sx, sy) > DRAG_THRESHOLD_PX) {
-      d.moved = true;
-    }
-    if (d.moved) {
-      setView((v) => clampView({ tx: d.startTx + sx, ty: d.startTy + sy, zoom: v.zoom }));
-    }
-  }
-
-  function onPointerUp(e: React.PointerEvent<SVGSVGElement>) {
-    const d = dragRef.current;
-    if (!d || d.pointerId !== e.pointerId) return;
-    (e.currentTarget as SVGSVGElement).releasePointerCapture(e.pointerId);
-    dragRef.current = null;
-  }
-
-  function handlePinClick(code: string) {
-    // Suppress click if the user was actually dragging.
-    if (dragRef.current?.moved) return;
-    pickAirport(code);
-  }
-
-  // Visual sizes are kept stable in screen-space by dividing by zoom inside
-  // the scaled group.
-  const z = view.zoom;
-  const dashedStrokeWidth = 3 / z;
-  const dashedDashArray = `${8 / z} ${6 / z}`;
-  const labelFontSize = 11 / z;
-  const labelHaloWidth = 3 / z;
-  const labelOffsetY = -12 / z;
+  // Visual sizes are kept stable in screen-space by dividing by k inside the
+  // scaled group.
+  const k = transform.k;
+  const dashedStrokeWidth = 3 / k;
+  const dashedDashArray = `${8 / k} ${6 / k}`;
+  const labelFontSize = 11 / k;
+  const labelHaloWidth = 3 / k;
+  const labelOffsetY = -12 / k;
 
   return (
     <div className="rounded-3xl border-2 border-indigo-200 bg-gradient-to-b from-indigo-50 to-sky-100 p-3 dark:border-indigo-900 dark:from-indigo-950 dark:to-sky-950">
@@ -218,22 +291,14 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
           </button>
         </div>
         <div className="flex items-center gap-1.5">
-          <ZoomBtn
-            label="−"
-            ariaLabel="Zoom out"
-            onClick={() => zoomAt((svgRef.current?.getBoundingClientRect().left ?? 0) + (svgRef.current?.getBoundingClientRect().width ?? WIDTH) / 2, (svgRef.current?.getBoundingClientRect().top ?? 0) + (svgRef.current?.getBoundingClientRect().height ?? HEIGHT) / 2, 1 / 1.4)}
-          />
+          <ZoomBtn label="−" ariaLabel="Zoom out" onClick={() => zoomByFactor(1 / 1.4)} />
           <span className="min-w-[3.5rem] text-center text-[11px] font-bold tabular-nums text-zinc-600 dark:text-zinc-400">
-            {z.toFixed(1)}×
+            {k.toFixed(1)}×
           </span>
-          <ZoomBtn
-            label="+"
-            ariaLabel="Zoom in"
-            onClick={() => zoomAt((svgRef.current?.getBoundingClientRect().left ?? 0) + (svgRef.current?.getBoundingClientRect().width ?? WIDTH) / 2, (svgRef.current?.getBoundingClientRect().top ?? 0) + (svgRef.current?.getBoundingClientRect().height ?? HEIGHT) / 2, 1.4)}
-          />
+          <ZoomBtn label="+" ariaLabel="Zoom in" onClick={() => zoomByFactor(1.4)} />
           <button
             type="button"
-            onClick={() => setView({ tx: 0, ty: 0, zoom: 1 })}
+            onClick={resetView}
             className="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-zinc-600 ring-1 ring-zinc-200 hover:bg-zinc-50 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-700"
             aria-label="Reset map view"
           >
@@ -242,21 +307,16 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
         </div>
       </div>
       <p className="mb-2 px-1 text-[11px] font-medium text-zinc-600 dark:text-zinc-400">
-        {mode === "from"
-          ? "Tap a city for where you're flying from"
-          : "Now tap where you'd like to go!"} <span className="text-zinc-400">· scroll to zoom, drag to pan</span>
+        {mode === "from" ? "Tap a city for where you're flying from" : "Now tap where you'd like to go!"}{" "}
+        <span className="text-zinc-400">· scroll / pinch to zoom, drag to pan, tap clusters to drill in</span>
       </p>
 
       <svg
         ref={svgRef}
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        className={`block h-auto w-full select-none touch-none ${dragRef.current?.moved ? "cursor-grabbing" : "cursor-grab"}`}
+        className="block h-auto w-full cursor-grab select-none touch-none active:cursor-grabbing"
         role="img"
         aria-label="World map flight picker"
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
       >
         <defs>
           <linearGradient id="oceanReal" x1="0" y1="0" x2="0" y2="1">
@@ -271,19 +331,30 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
             <stop offset="0%" stopColor="#f97316" stopOpacity="0.6" />
             <stop offset="100%" stopColor="#f97316" stopOpacity="0" />
           </radialGradient>
+          {/* Origin-to-destination gradient stroke for the great-circle arc */}
+          <linearGradient
+            id="arcGradient"
+            gradientUnits="userSpaceOnUse"
+            x1={fromXY?.[0] ?? 0}
+            y1={fromXY?.[1] ?? 0}
+            x2={toXY?.[0] ?? 0}
+            y2={toXY?.[1] ?? 0}
+          >
+            <stop offset="0%" stopColor="#0ea5e9" />
+            <stop offset="50%" stopColor="#a855f7" />
+            <stop offset="100%" stopColor="#f97316" />
+          </linearGradient>
           <clipPath id="mapClipReal">
             <rect x="0" y="0" width={WIDTH} height={HEIGHT} rx="20" />
           </clipPath>
         </defs>
 
-        {/* Ocean fills the visible viewBox even when panned/zoomed */}
         <rect x="0" y="0" width={WIDTH} height={HEIGHT} fill="url(#oceanReal)" rx="20" />
 
-        {/* Zoomable / pannable content, clipped to the rounded viewBox */}
         <g clipPath="url(#mapClipReal)">
-          <g transform={`translate(${view.tx} ${view.ty}) scale(${view.zoom})`}>
+          <g transform={transform.toString()}>
             {/* Countries */}
-            <g>
+            <g pointerEvents="none">
               {countries.map((f, i) => {
                 const d = pathGen(f as Feature<Geometry>);
                 if (!d) return null;
@@ -301,34 +372,81 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
               })}
             </g>
 
-            {/* Flight arc */}
+            {/* Flight arc: dark halo + gradient dashed line + plane sprite
+                riding the path. `key` forces React to remount on route change
+                so the animation restarts cleanly. */}
             {arcPath && (
-              <path
-                d={arcPath}
-                fill="none"
-                stroke="#0f172a"
-                strokeWidth={dashedStrokeWidth}
-                strokeDasharray={dashedDashArray}
-                strokeLinecap="round"
-                opacity="0.85"
-              >
-                <animate
-                  attributeName="stroke-dashoffset"
-                  from="0"
-                  to={-28 / z}
-                  dur="1.2s"
-                  repeatCount="indefinite"
+              <g key={`arc-${from}-${to}`} pointerEvents="none">
+                {/* Soft halo for contrast over land */}
+                <path
+                  d={arcPath}
+                  fill="none"
+                  stroke="#0f172a"
+                  strokeWidth={6 / k}
+                  strokeLinecap="round"
+                  opacity="0.18"
                 />
-              </path>
+                {/* Gradient origin → destination */}
+                <path
+                  id="skyhop-flight-arc"
+                  d={arcPath}
+                  fill="none"
+                  stroke="url(#arcGradient)"
+                  strokeWidth={dashedStrokeWidth}
+                  strokeDasharray={dashedDashArray}
+                  strokeLinecap="round"
+                  opacity="0.95"
+                >
+                  <animate
+                    attributeName="stroke-dashoffset"
+                    from="0"
+                    to={-28 / k}
+                    dur="1.2s"
+                    repeatCount="indefinite"
+                  />
+                </path>
+                {/* Plane glyph riding the arc */}
+                <FlyingPlane k={k} />
+              </g>
             )}
 
-            {/* Airport pins */}
-            {AIRPORT_LIST.map((a) => {
-              const lnglat = AIRPORT_LATLNG[a.code];
-              if (!lnglat) return null;
-              const xy = projection(lnglat);
-              if (!xy) return null;
-              const [x, y] = xy;
+            {/* Cluster badges first, individual pins on top */}
+            {displayedClusters.map((c) => {
+              const radius = Math.min(20, 11 + Math.log2(c.count) * 2.6) / k;
+              const fontSize = Math.min(14, 10 + Math.log2(c.count) * 1.4) / k;
+              return (
+                <g key={`c-${c.id}`} transform={`translate(${c.x} ${c.y})`} className="cursor-pointer">
+                  <circle r={radius * 1.55} fill="#a855f7" opacity="0.18" pointerEvents="none" />
+                  <circle
+                    r={radius}
+                    fill="#7c3aed"
+                    stroke="#ffffff"
+                    strokeWidth={2 / k}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      expandCluster(c.id, c.x, c.y);
+                    }}
+                  >
+                    <title>{`${c.count} airports — click to zoom in`}</title>
+                  </circle>
+                  <text
+                    x="0"
+                    y={fontSize * 0.36}
+                    textAnchor="middle"
+                    fontSize={fontSize}
+                    fontWeight="800"
+                    fill="#ffffff"
+                    pointerEvents="none"
+                    style={{ userSelect: "none" }}
+                  >
+                    {c.count}
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* Individual airport pins */}
+            {soloPoints.map((a) => {
               const isFrom = a.code === from;
               const isTo = a.code === to;
               const isActive = isFrom || isTo;
@@ -340,24 +458,25 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
               const color = isFrom ? "#0ea5e9" : isTo ? "#f97316" : "#1e293b";
               const baseR = isActive ? 7 : 4.5;
               return (
-                <g key={a.code} transform={`translate(${x} ${y})`} className="cursor-pointer">
-                  {isActive && <circle r={22 / z} fill={glow} />}
+                <g key={a.code} transform={`translate(${a.x} ${a.y})`} className="cursor-pointer">
+                  {isActive && <circle r={22 / k} fill={glow} pointerEvents="none" />}
                   <circle
-                    r={18 / z}
+                    r={18 / k}
                     fill="transparent"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handlePinClick(a.code);
+                      pickAirport(a.code);
                     }}
                   >
                     <title>{`${a.code} — ${a.city}`}</title>
                   </circle>
                   <circle
-                    r={baseR / z}
+                    r={baseR / k}
                     fill={color}
                     stroke="#ffffff"
-                    strokeWidth={2 / z}
-                    style={{ pointerEvents: "none", transition: "fill 0.2s ease" }}
+                    strokeWidth={2 / k}
+                    pointerEvents="none"
+                    style={{ transition: "fill 0.2s ease" }}
                   />
                   {isActive && (
                     <text
@@ -367,12 +486,12 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
                       fontSize={labelFontSize}
                       fontWeight="800"
                       fill="#0f172a"
+                      pointerEvents="none"
                       style={{
                         paintOrder: "stroke",
                         stroke: "#ffffff",
                         strokeWidth: labelHaloWidth,
                         strokeLinejoin: "round",
-                        pointerEvents: "none",
                       }}
                     >
                       {a.code}
@@ -386,15 +505,62 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
       </svg>
 
       <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs">
-        <span className="rounded-full bg-sky-500 px-2.5 py-1 font-bold text-white shadow-sm">
+        <button
+          type="button"
+          onClick={() => {
+            if (fromXY) zoomTo(4, fromXY[0], fromXY[1]);
+            setMode("from");
+          }}
+          aria-label={`Fly map to ${AIRPORTS[from]?.city ?? from} and pick a new origin`}
+          className="rounded-full bg-sky-500 px-2.5 py-1 font-bold text-white shadow-sm transition hover:bg-sky-600 hover:shadow-md active:scale-95"
+        >
           {from} — {AIRPORTS[from]?.city ?? "?"}
-        </span>
-        <span className="text-zinc-400">✈️</span>
-        <span className="rounded-full bg-orange-500 px-2.5 py-1 font-bold text-white shadow-sm">
+        </button>
+        <span className="text-zinc-400" aria-hidden>✈️</span>
+        <button
+          type="button"
+          onClick={() => {
+            if (toXY) zoomTo(4, toXY[0], toXY[1]);
+            setMode("to");
+          }}
+          aria-label={`Fly map to ${AIRPORTS[to]?.city ?? to} and pick a new destination`}
+          className="rounded-full bg-orange-500 px-2.5 py-1 font-bold text-white shadow-sm transition hover:bg-orange-600 hover:shadow-md active:scale-95"
+        >
           {to} — {AIRPORTS[to]?.city ?? "?"}
-        </span>
+        </button>
       </div>
     </div>
+  );
+}
+
+/**
+ * Plane sprite that flies the great-circle arc on a 6 s loop. Uses SVG
+ * `<animateMotion>` with `mpath` so the browser does the heavy lifting
+ * (constant arc-length traversal + rotate-along-tangent). The glyph is
+ * drawn pointing +x so `rotate="auto"` aligns it with the path direction.
+ * Size is divided by `k` so the plane stays visually constant across zoom.
+ */
+function FlyingPlane({ k }: { k: number }) {
+  const s = 0.75 / k;
+  return (
+    <g>
+      <g transform={`scale(${s})`}>
+        {/* glow halo */}
+        <circle r={14} fill="#fde047" opacity="0.6" />
+        <circle r={9} fill="#fef9c3" opacity="0.9" />
+        {/* plane body — nose at +x so animateMotion rotate=auto orients it */}
+        <path
+          d="M16 0 L-6 -7 L-2 -2.5 L-12 -2.5 L-14 -1 L-14 1 L-12 2.5 L-2 2.5 L-6 7 Z"
+          fill="#ffffff"
+          stroke="#0f172a"
+          strokeWidth="1.4"
+          strokeLinejoin="round"
+        />
+      </g>
+      <animateMotion dur="6s" repeatCount="indefinite" rotate="auto">
+        <mpath href="#skyhop-flight-arc" />
+      </animateMotion>
+    </g>
   );
 }
 
