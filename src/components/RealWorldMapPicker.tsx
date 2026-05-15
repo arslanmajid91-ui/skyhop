@@ -165,6 +165,12 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
       .filter((event) => {
         // Allow wheel + drag, ignore right-click drag.
         if (event.type === "mousedown" && event.button !== 0) return false;
+        // Don't start a zoom-drag when the user is interacting with a
+        // child element marked as interactive (pins, clusters). Without
+        // this, d3-zoom's mousedown handler intercepts the gesture and
+        // child onClick handlers never fire.
+        const target = event.target as Element | null;
+        if (target?.closest?.("[data-skyhop-interactive]")) return false;
         return !event.ctrlKey || event.type === "wheel";
       })
       .on("zoom", (event) => setTransform(event.transform));
@@ -422,6 +428,7 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
                     fill="#7c3aed"
                     stroke="#ffffff"
                     strokeWidth={2 / k}
+                    data-skyhop-interactive
                     onClick={(e) => {
                       e.stopPropagation();
                       expandCluster(c.id, c.x, c.y);
@@ -463,6 +470,7 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
                   <circle
                     r={18 / k}
                     fill="transparent"
+                    data-skyhop-interactive
                     onClick={(e) => {
                       e.stopPropagation();
                       pickAirport(a.code);
