@@ -107,9 +107,9 @@ export type Airport = {
 };
 
 /**
- * ~150 major international airports. Originally 22 hand-picked hubs; expanded
- * for the real-world Mercator map. The cartoon map only renders airports that
- * also appear in AIRPORT_MAP_POS, so adding entries here is safe.
+ * ~150 major international airports — Carrier hubs, major intercontinental
+ * gateways, and notable regional cities. Used by the real-world Mercator
+ * map (via AIRPORT_LATLNG) and the flight generator.
  */
 export const AIRPORTS: Record<string, Airport> = {
   // --- Carrier hubs ---------------------------------------------------------
@@ -476,43 +476,6 @@ export const AIRPORT_LATLNG: Record<string, [lng: number, lat: number]> = {
   CHC: [172.5375, -43.4894],
   NAN: [177.4439, -17.7553],
   PPT: [-149.6111, -17.5536],
-};
-
-/**
- * Hand-placed positions for each airport on the cartoon world map.
- * Coords are within a 1000 × 500 viewBox (Mercator-ish). Not geographically
- * accurate — just kid-friendly approximate. The cartoon picker only renders
- * airports listed here; new entries in AIRPORTS won't show up on it.
- */
-export const AIRPORT_MAP_POS: Record<string, { x: number; y: number }> = {
-  // Americas
-  YYZ: { x: 218, y: 142 },
-  JFK: { x: 232, y: 168 },
-  LAX: { x: 138, y: 198 },
-  GRU: { x: 322, y: 340 },
-  // Europe
-  LHR: { x: 478, y: 132 },
-  AMS: { x: 502, y: 130 },
-  FRA: { x: 514, y: 144 },
-  CDG: { x: 492, y: 150 },
-  MAD: { x: 472, y: 172 },
-  // Middle East
-  IST: { x: 552, y: 170 },
-  CAI: { x: 562, y: 218 },
-  DOH: { x: 600, y: 220 },
-  DXB: { x: 614, y: 215 },
-  AUH: { x: 614, y: 226 },
-  // Asia
-  DEL: { x: 670, y: 215 },
-  BOM: { x: 666, y: 240 },
-  BKK: { x: 724, y: 248 },
-  HKG: { x: 770, y: 232 },
-  SIN: { x: 740, y: 290 },
-  NRT: { x: 832, y: 198 },
-  // Oceania
-  SYD: { x: 858, y: 378 },
-  // Africa
-  JNB: { x: 568, y: 358 },
 };
 
 /**

@@ -5,7 +5,6 @@ import { useState } from "react";
 import { AIRPORT_LIST } from "@/lib/airlines";
 import { GlobeIcon, PinIcon, PaperPlaneIcon, SwapIcon } from "./icons";
 import BouncyCounter from "./BouncyCounter";
-import WorldMapPicker from "./WorldMapPicker";
 import RealWorldMapPicker from "./RealWorldMapPicker";
 
 const today = new Date().toISOString().split("T")[0];
@@ -23,7 +22,7 @@ export default function SearchForm({
   const [passengers, setPassengers] = useState(initial?.passengers ?? "1");
   const [error, setError] = useState("");
   const [swapping, setSwapping] = useState(false);
-  const [pickerMode, setPickerMode] = useState<"cartoon" | "real" | "list">("cartoon");
+  const [pickerMode, setPickerMode] = useState<"real" | "list">("real");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -50,18 +49,6 @@ export default function SearchForm({
         <div className="inline-flex rounded-full border border-zinc-200 bg-zinc-50 p-1 dark:border-zinc-700 dark:bg-zinc-800">
           <button
             type="button"
-            onClick={() => setPickerMode("cartoon")}
-            className={
-              "rounded-full px-3.5 py-1.5 text-xs font-bold transition " +
-              (pickerMode === "cartoon"
-                ? "bg-white text-sky-700 shadow-sm dark:bg-zinc-900 dark:text-sky-300"
-                : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300")
-            }
-          >
-            🎨 Cartoon
-          </button>
-          <button
-            type="button"
             onClick={() => setPickerMode("real")}
             className={
               "rounded-full px-3.5 py-1.5 text-xs font-bold transition " +
@@ -70,7 +57,7 @@ export default function SearchForm({
                 : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300")
             }
           >
-            🗺️ Real world
+            🗺️ Map
           </button>
           <button
             type="button"
@@ -86,17 +73,6 @@ export default function SearchForm({
           </button>
         </div>
       </div>
-
-      {pickerMode === "cartoon" && (
-        <WorldMapPicker
-          from={from}
-          to={to}
-          onChange={(next) => {
-            setFrom(next.from);
-            setTo(next.to);
-          }}
-        />
-      )}
 
       {pickerMode === "real" && (
         <RealWorldMapPicker

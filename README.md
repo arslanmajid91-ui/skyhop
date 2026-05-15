@@ -6,9 +6,8 @@ Built with **Next.js 16**, **React 19.2**, and **Tailwind v4**. No backend — f
 
 ## Features
 
-- 🗺️ **Three ways to pick a route**
-  - 🎨 **Cartoon map** — hand-placed pins on a stylized world map (default)
-  - 🗺️ **Real-world map** — d3-geo Mercator projection with a great-circle arc between FROM and TO
+- 🗺️ **Two ways to pick a route**
+  - 🗺️ **Real-world map** — d3-geo Mercator projection with pan / pinch-zoom, supercluster-powered cluster pins, and an animated plane riding the great-circle arc between FROM and TO
   - 🔤 **Type / list** — classic dropdown for power users
 - 🔍 Search by origin, destination, date, cabin, and passenger count
 - 🏷️ Filter by airline, max stops, price; sort by price / duration / departure
@@ -44,7 +43,7 @@ For any (`from`, `to`, `date`) we generate:
 
 Times and prices are seeded by `hash(airline, route, date)` so refreshing the same search returns the same results. See [`src/lib/flights.ts`](./src/lib/flights.ts).
 
-Current city catalog: **21 airports** across Americas, Europe, Middle East, Asia/Pacific, and Africa — defined in [`src/lib/airlines.ts`](./src/lib/airlines.ts) with both `AIRPORT_LATLNG` (real lat/lng for the Mercator map) and `AIRPORT_MAP_POS` (hand-placed coords for the cartoon map).
+Current city catalog: **~150 international airports** across Americas, Europe, Middle East, Africa, Asia/Pacific, Central Asia, and Oceania — defined in [`src/lib/airlines.ts`](./src/lib/airlines.ts) along with `AIRPORT_LATLNG` (real lat/lng for the Mercator map).
 
 ## Project structure
 
@@ -68,8 +67,7 @@ src/
 ├── components/
 │   ├── Header.tsx                        # sticky top nav
 │   ├── SearchForm.tsx                    # picker-mode toggle + form state
-│   ├── WorldMapPicker.tsx                # 🎨 cartoon SVG world map
-│   ├── RealWorldMapPicker.tsx            # 🗺️ d3-geo Mercator + great-circle arc
+│   ├── RealWorldMapPicker.tsx            # 🗺️ d3-geo + d3-zoom + supercluster + animated arc
 │   ├── BouncyCounter.tsx                 # +/- traveler counter
 │   ├── ConfettiBurst.tsx                 # canvas-confetti wrapper for the success page
 │   ├── FlightCard.tsx
@@ -77,7 +75,7 @@ src/
 │   ├── AirlineLogo.tsx
 │   └── icons.tsx                         # SVG icons + Hoppy mascot + drifting plane
 └── lib/
-    ├── airlines.ts                       # AIRLINES, AIRPORTS, AIRPORT_LATLNG, AIRPORT_MAP_POS
+    ├── airlines.ts                       # AIRLINES, AIRPORTS, AIRPORT_LATLNG, airlineServes()
     ├── flights.ts                        # searchFlights() + findFlight()
     └── format.ts                         # price / duration / time formatters
 ```
