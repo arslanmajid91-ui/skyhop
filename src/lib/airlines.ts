@@ -22,81 +22,8 @@ export const AIRLINES: Record<AirlineCode, Airline> = {
 
 export const AIRLINE_LIST: Airline[] = Object.values(AIRLINES);
 
-/**
- * Each carrier's actual network — the cities they fly to from their hub.
- * Hand-curated for plausibility against our 150-airport catalog. A carrier
- * only offers a flight on a route when BOTH endpoints are in its set.
- * Real-world coverage as of recent timetables: TK has the largest network
- * (~340 dest), QR ~170, EK ~150, EY ~70.
- */
-const EK_SERVES = new Set<string>([
-  // Hub
-  "DXB",
-  // Americas
-  "JFK","EWR","BOS","IAD","ORD","IAH","DFW","LAX","SFO","SEA","MIA","MCO","YYZ","MEX","GRU","EZE","SCL",
-  // Europe
-  "LHR","LGW","MAN","EDI","DUB","CDG","NCE","AMS","BRU","FRA","MUC","DUS","ZRH","GVA","VIE","MAD","BCN","LIS","FCO","MXP","ATH","CPH","ARN","OSL","HEL","WAW","PRG","BUD","IST","SVO","KBP",
-  // Middle East / Africa
-  "AUH","DOH","JED","RUH","MCT","KWI","BAH","AMM","BEY","TLV","IKA","CAI","CMN","TUN","JNB","CPT","ADD","NBO","LOS","ABV","DKR","ACC","LAD","DAR","KGL","HRE",
-  // South / SE / East Asia
-  "BOM","DEL","MAA","BLR","HYD","COK","CCU","KHI","ISB","LHE","CMB","MLE","KTM","DAC","BKK","HKT","KUL","SIN","MNL","CGK","DPS","HKG","TPE","ICN","NRT","HND","KIX","PEK","PVG","CAN","HAN","SGN","RGN","PNH",
-  // Oceania
-  "SYD","MEL","BNE","PER","AKL","CHC",
-]);
-
-const EY_SERVES = new Set<string>([
-  // Hub
-  "AUH",
-  // Americas
-  "JFK","EWR","IAD","ORD","YYZ",
-  // Europe
-  "LHR","MAN","DUB","CDG","AMS","BRU","FRA","MUC","DUS","ZRH","VIE","MAD","BCN","FCO","MXP","ATH","IST",
-  // Middle East / Africa
-  "DXB","DOH","JED","RUH","MCT","KWI","BAH","AMM","BEY","TLV","IKA","CAI","JNB","ADD","NBO",
-  // South / SE / East Asia
-  "BOM","DEL","MAA","BLR","HYD","COK","CCU","KHI","ISB","LHE","CMB","MLE","KTM","DAC","BKK","KUL","SIN","MNL","CGK","HKG","ICN","NRT","KIX","PEK","PVG","HAN","SGN",
-  // Oceania
-  "SYD","MEL","BNE","AKL",
-]);
-
-const QR_SERVES = new Set<string>([
-  // Hub
-  "DOH",
-  // Americas
-  "JFK","EWR","BOS","IAD","ORD","IAH","DFW","LAX","SFO","SEA","MIA","YYZ","YUL","MEX","GRU","EZE","SCL",
-  // Europe
-  "LHR","LGW","MAN","EDI","DUB","CDG","NCE","AMS","BRU","FRA","MUC","DUS","BER","ZRH","GVA","VIE","MAD","BCN","LIS","FCO","MXP","VCE","ATH","CPH","ARN","OSL","HEL","WAW","PRG","BUD","OTP","SOF","BEG","IST","SAW","KBP",
-  // Middle East / Africa
-  "DXB","AUH","JED","RUH","MCT","KWI","BAH","AMM","BEY","TLV","IKA","EVN","TBS","CAI","CMN","RAK","TUN","ALG","JNB","CPT","ADD","NBO","LOS","ABV","ACC","DKR","DAR","KGL","LAD","HRE",
-  // South / SE / East Asia
-  "BOM","DEL","MAA","BLR","HYD","COK","CCU","KHI","ISB","LHE","CMB","MLE","KTM","DAC","BKK","HKT","KUL","SIN","MNL","CGK","DPS","HKG","TPE","ICN","NRT","HND","KIX","PEK","PVG","CAN","SZX","CTU","HAN","SGN","RGN","PNH",
-  // Oceania
-  "SYD","MEL","BNE","PER","AKL",
-]);
-
-const TK_SERVES = new Set<string>([
-  // Hub + secondary
-  "IST","SAW",
-  // Americas (TK has the broadest US/CA network of the four)
-  "JFK","EWR","BOS","IAD","ATL","ORD","IAH","DFW","LAX","SFO","SEA","MIA","MCO","DEN","LAS","PHL","DTW","MSP","YYZ","YUL","YVR","MEX","CUN","HAV","PTY","BOG","LIM","CCS","UIO","GRU","GIG","EZE","SCL","MVD",
-  // Europe (TK serves almost every European capital)
-  "LHR","LGW","MAN","EDI","DUB","CDG","NCE","AMS","BRU","FRA","MUC","DUS","BER","ZRH","GVA","VIE","MAD","BCN","LIS","FCO","MXP","VCE","ATH","CPH","ARN","OSL","HEL","KEF","WAW","PRG","BUD","OTP","SOF","BEG","RIX","TLL","SVO","LED","KBP",
-  // Middle East / Africa
-  "DXB","AUH","DOH","JED","RUH","MCT","KWI","BAH","AMM","BEY","TLV","BGW","IKA","EVN","TBS","GYD","CAI","CMN","RAK","TUN","ALG","JNB","CPT","ADD","NBO","LOS","ABV","ACC","DKR","DAR","KGL","LAD","HRE",
-  // South / SE / East Asia (TK's network spans every major Asian hub)
-  "BOM","DEL","MAA","BLR","HYD","COK","CCU","KHI","ISB","LHE","CMB","MLE","KTM","DAC","BKK","HKT","KUL","SIN","MNL","CGK","DPS","HKG","TPE","ICN","NRT","HND","KIX","PEK","PKX","PVG","CAN","SZX","CTU","HAN","SGN","RGN","PNH",
-  // Central Asia (TK is the dominant carrier here)
-  "TAS","ALA","NQZ","ULN",
-  // Oceania
-  "SYD","MEL",
-]);
-
-const SERVES_BY_AIRLINE: Record<AirlineCode, Set<string>> = {
-  EK: EK_SERVES,
-  EY: EY_SERVES,
-  QR: QR_SERVES,
-  TK: TK_SERVES,
-};
+// Per-carrier route adjacency is loaded from OpenFlights data via the
+// generated module — see scripts/build-routes.mjs and routes.generated.ts.
 
 export type Airport = {
   code: string;
@@ -515,20 +442,65 @@ export const AIRPORT_MAP_POS: Record<string, { x: number; y: number }> = {
   JNB: { x: 568, y: 358 },
 };
 
-/**
- * True if `airline` actually flies to `airport` (per the hand-curated served
- * sets above). Used by the flight generator to decide whether each carrier
- * can offer a route — when a carrier serves neither endpoint, it offers
- * nothing on that search.
- */
-export function airlineServes(airline: AirlineCode, airport: string): boolean {
-  if (!(airport in AIRPORTS)) return false;
-  return SERVES_BY_AIRLINE[airline].has(airport);
+import { ROUTES } from "./routes.generated";
+
+/** Cache of "all airports this carrier touches" computed lazily from ROUTES. */
+const _touchedCache = new Map<AirlineCode, Set<string>>();
+function airportsTouchedBy(airline: AirlineCode): Set<string> {
+  let s = _touchedCache.get(airline);
+  if (s) return s;
+  s = new Set<string>();
+  const adj = ROUTES[airline] ?? {};
+  for (const [from, tos] of Object.entries(adj)) {
+    s.add(from);
+    for (const t of tos) s.add(t);
+  }
+  _touchedCache.set(airline, s);
+  return s;
 }
 
-/** List of all carriers that serve a given airport. Useful for UI hints. */
+/**
+ * True if `airline` actually serves `airport` — i.e. has at least one route
+ * in either direction in the OpenFlights data.
+ */
+export function airlineServes(airline: AirlineCode, airport: string): boolean {
+  return airportsTouchedBy(airline).has(airport);
+}
+
+/** List of all carriers that fly to/from the given airport. */
 export function carriersForAirport(airport: string): AirlineCode[] {
-  return AIRLINE_LIST
-    .filter((a) => SERVES_BY_AIRLINE[a.code].has(airport))
-    .map((a) => a.code);
+  return AIRLINE_LIST.filter((a) => airportsTouchedBy(a.code).has(airport)).map((a) => a.code);
+}
+
+export type RouteResult =
+  | { type: "direct" }
+  | { type: "one-stop"; via: string };
+
+/**
+ * Resolve a real (from, to) on `airline` from OpenFlights data. Returns
+ * either a direct route or a one-stop connection, preferring the carrier's
+ * hub but falling back to any common waypoint. Returns null if the airline
+ * doesn't connect these two airports at all.
+ */
+export function findRoute(
+  airline: AirlineCode,
+  from: string,
+  to: string
+): RouteResult | null {
+  const adj = ROUTES[airline];
+  if (!adj) return null;
+  const out = adj[from];
+  if (!out) return null;
+  if (out.includes(to)) return { type: "direct" };
+  // Prefer the carrier's hub as the connection point — it's how these
+  // airlines actually operate and gives consistent timing/pricing.
+  const hub = AIRLINES[airline].hub;
+  if (out.includes(hub) && adj[hub]?.includes(to)) {
+    return { type: "one-stop", via: hub };
+  }
+  // Otherwise, any common waypoint will do.
+  for (const mid of out) {
+    if (adj[mid]?.includes(to)) return { type: "one-stop", via: mid };
+  }
+  return null;
 }
