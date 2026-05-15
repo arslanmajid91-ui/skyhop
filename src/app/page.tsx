@@ -2,7 +2,7 @@ import Link from "next/link";
 import Header from "@/components/Header";
 import SearchForm from "@/components/SearchForm";
 import AirlineLogo from "@/components/AirlineLogo";
-import { AIRLINE_LIST, AIRPORT_LIST } from "@/lib/airlines";
+import { AIRLINE_LIST } from "@/lib/airlines";
 import { PlaneCruiseIcon, A380Plane } from "@/components/icons";
 
 const POPULAR_ROUTES: { from: string; to: string; label: string; emoji: string }[] = [
@@ -79,10 +79,6 @@ export default function Home() {
 
           {/* Headline */}
           <div className="relative mx-auto max-w-3xl text-center">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium backdrop-blur">
-              <span className="text-base">🛩️</span>
-              <span>{AIRLINE_LIST.length} carriers · across {AIRPORT_LIST.length} international airports</span>
-            </div>
             <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl">
               Where to{" "}
               <span className="gradient-text">next?</span>
