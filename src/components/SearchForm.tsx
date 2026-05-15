@@ -16,7 +16,9 @@ export default function SearchForm({
 }) {
   const router = useRouter();
   const [from, setFrom] = useState(initial?.from ?? "JFK");
-  const [to, setTo] = useState(initial?.to ?? "DXB");
+  // TO starts empty so the user picks it deliberately; map shows only FROM
+  // (no arc, no plane) until a destination is chosen.
+  const [to, setTo] = useState(initial?.to ?? "");
   const [date, setDate] = useState(initial?.date ?? "");
   const [cabin, setCabin] = useState(initial?.cabin ?? "economy");
   const [passengers, setPassengers] = useState(initial?.passengers ?? "1");
@@ -26,6 +28,14 @@ export default function SearchForm({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!from) {
+      setError("Pick where you're flying from.");
+      return;
+    }
+    if (!to) {
+      setError("Pick where you'd like to go.");
+      return;
+    }
     if (from === to) {
       setError("Origin and destination must differ.");
       return;

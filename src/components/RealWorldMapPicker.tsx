@@ -188,7 +188,9 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
 
   function pickAirport(code: string) {
     if (mode === "from") {
-      if (code === to) onChange({ from: code, to: from });
+      // Only swap when there's a real TO to swap with — avoids clobbering
+      // FROM with an empty string when the user hasn't picked TO yet.
+      if (to && code === to) onChange({ from: code, to: from });
       else onChange({ from: code, to });
       // After picking FROM, latch into TO mode and stay there — subsequent
       // taps update the destination, letting users browse arrival options
@@ -196,7 +198,7 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
       // explicit click on "Pick FROM" (or the blue FROM chip below).
       setMode("to");
     } else {
-      if (code === from) onChange({ from: to, to: code });
+      if (from && code === from) onChange({ from: to, to: code });
       else onChange({ from, to: code });
       // Stay in TO mode (see comment above).
     }
@@ -525,29 +527,82 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
       </svg>
 
       <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs">
-        <button
-          type="button"
-          onClick={() => {
-            if (fromXY) zoomTo(4, fromXY[0], fromXY[1]);
-            setMode("from");
-          }}
-          aria-label={`Fly map to ${AIRPORTS[from]?.city ?? from} and pick a new origin`}
-          className="rounded-full bg-sky-500 px-2.5 py-1 font-bold text-white shadow-sm transition hover:bg-sky-600 hover:shadow-md active:scale-95"
-        >
-          {from} — {AIRPORTS[from]?.city ?? "?"}
-        </button>
-        <span className="text-zinc-400" aria-hidden>✈️</span>
-        <button
-          type="button"
-          onClick={() => {
-            if (toXY) zoomTo(4, toXY[0], toXY[1]);
-            setMode("to");
-          }}
-          aria-label={`Fly map to ${AIRPORTS[to]?.city ?? to} and pick a new destination`}
-          className="rounded-full bg-orange-500 px-2.5 py-1 font-bold text-white shadow-sm transition hover:bg-orange-600 hover:shadow-md active:scale-95"
-        >
-          {to} — {AIRPORTS[to]?.city ?? "?"}
-        </button>
+        {/* FROM chip — picked: pill + clear (×); empty: dashed placeholder */}
+        {from ? (
+          <div className="inline-flex overflow-hidden rounded-full shadow-sm">
+            <button
+              type="button"
+              onClick={() => {
+                if (fromXY) zoomTo(4, fromXY[0], fromXY[1]);
+                setMode("from");
+              }}
+              aria-label={`Fly map to ${AIRPORTS[from]?.city ?? from} and pick a new origin`}
+              className="bg-sky-500 px-2.5 py-1 font-bold text-white transition hover:bg-sky-600 active:scale-95"
+            >
+              {from} — {AIRPORTS[from]?.city ?? "?"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                onChange({ from: "", to });
+                setMode("from");
+                resetView();
+              }}
+              aria-label="Clear origin"
+              className="flex items-center justify-center bg-sky-600 px-2 py-1 font-bold text-white transition hover:bg-sky-700 active:scale-95"
+            >
+              ×
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setMode("from")}
+            className="rounded-full border border-dashed border-sky-400 px-2.5 py-1 font-bold text-sky-600 hover:bg-sky-50 dark:text-sky-300 dark:hover:bg-sky-950"
+          >
+            + Pick origin
+          </button>
+        )}
+
+        <span className="text-zinc-400" aria-hidden>
+          ✈️
+        </span>
+
+        {/* TO chip */}
+        {to ? (
+          <div className="inline-flex overflow-hidden rounded-full shadow-sm">
+            <button
+              type="button"
+              onClick={() => {
+                if (toXY) zoomTo(4, toXY[0], toXY[1]);
+                setMode("to");
+              }}
+              aria-label={`Fly map to ${AIRPORTS[to]?.city ?? to} and pick a new destination`}
+              className="bg-orange-500 px-2.5 py-1 font-bold text-white transition hover:bg-orange-600 active:scale-95"
+            >
+              {to} — {AIRPORTS[to]?.city ?? "?"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                onChange({ from, to: "" });
+                setMode("to");
+              }}
+              aria-label="Clear destination"
+              className="flex items-center justify-center bg-orange-600 px-2 py-1 font-bold text-white transition hover:bg-orange-700 active:scale-95"
+            >
+              ×
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setMode("to")}
+            className="rounded-full border border-dashed border-orange-400 px-2.5 py-1 font-bold text-orange-600 hover:bg-orange-50 dark:text-orange-300 dark:hover:bg-orange-950"
+          >
+            + Pick destination
+          </button>
+        )}
       </div>
     </div>
   );
