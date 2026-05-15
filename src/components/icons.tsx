@@ -26,10 +26,26 @@ export function PaperPlaneIcon({ className = "" }: { className?: string }) {
   );
 }
 
+/**
+ * Cruising commercial jet silhouette — side view, nose pointing right.
+ * Sized for the 56×56 .plane-drift slot in the hero. Renders as a single
+ * currentColor fill (white in the hero) so it reads against the gradient.
+ */
 export function PlaneCruiseIcon({ className = "" }: { className?: string }) {
   return (
     <svg viewBox="0 0 64 64" className={className} fill="currentColor">
-      <path d="M61 33 L41 30 L33 16 L29 16 L33 28 L18 26 L13 20 L10 20 L11 28 L4 31 L4 33 L11 35 L10 43 L13 43 L18 37 L33 35 L29 47 L33 47 L41 33 L61 33 Z" />
+      {/* Vertical stabilizer (tail fin) */}
+      <path d="M 14 27 L 8 7 L 14 7 L 22 27 Z" />
+      {/* Horizontal stabilizer */}
+      <path d="M 14 33 L 4 37 L 13 37 L 22 33 Z" />
+      {/* Main wing — swept back, extending down to wingtip */}
+      <path d="M 50 34 L 22 55 L 33 55 L 42 34 Z" />
+      {/* Engine pod under wing */}
+      <ellipse cx="37" cy="42" rx="5.5" ry="2.4" />
+      {/* Fuselage with rounded nose / tapered tail */}
+      <path d="M 5 30 Q 5 26 16 26 L 56 26 Q 60 26 60 30 Q 60 34 56 34 L 16 34 Q 5 34 5 30 Z" />
+      {/* Cockpit window hint near the nose */}
+      <path d="M 56 28 Q 59 28 60 30 L 55 30 Z" opacity="0.55" />
     </svg>
   );
 }

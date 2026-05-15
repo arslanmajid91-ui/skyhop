@@ -190,11 +190,15 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
     if (mode === "from") {
       if (code === to) onChange({ from: code, to: from });
       else onChange({ from: code, to });
+      // After picking FROM, latch into TO mode and stay there — subsequent
+      // taps update the destination, letting users browse arrival options
+      // without flipping back to origin. Switching back requires an
+      // explicit click on "Pick FROM" (or the blue FROM chip below).
       setMode("to");
     } else {
       if (code === from) onChange({ from: to, to: code });
       else onChange({ from, to: code });
-      setMode("from");
+      // Stay in TO mode (see comment above).
     }
   }
 
