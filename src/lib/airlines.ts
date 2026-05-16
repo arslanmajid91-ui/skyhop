@@ -123,6 +123,102 @@ export const AIRPORT_LIST: Airport[] = Object.values(AIRPORTS);
 /** Geographic lat/lng for each airport (used by the real-world Mercator map). */
 export const AIRPORT_LATLNG: Record<string, [number, number]> = AIRPORT_LATLNG_GENERATED;
 
+// ─── Top countries by airport count, for the map's quick-jump chips ────────
+
+/** OpenFlights uses full country names; map them to 2-letter ISO codes
+ *  for the emoji-flag formula. Only entries we display need to be here. */
+const COUNTRY_META: Record<string, { iso: string; display: string }> = {
+  "United States": { iso: "US", display: "USA" },
+  "China": { iso: "CN", display: "China" },
+  "Canada": { iso: "CA", display: "Canada" },
+  "Russia": { iso: "RU", display: "Russia" },
+  "Brazil": { iso: "BR", display: "Brazil" },
+  "India": { iso: "IN", display: "India" },
+  "Mexico": { iso: "MX", display: "Mexico" },
+  "Indonesia": { iso: "ID", display: "Indonesia" },
+  "France": { iso: "FR", display: "France" },
+  "Japan": { iso: "JP", display: "Japan" },
+  "Australia": { iso: "AU", display: "Australia" },
+  "United Kingdom": { iso: "GB", display: "UK" },
+  "Italy": { iso: "IT", display: "Italy" },
+  "Spain": { iso: "ES", display: "Spain" },
+  "Germany": { iso: "DE", display: "Germany" },
+  "Norway": { iso: "NO", display: "Norway" },
+  "Greece": { iso: "GR", display: "Greece" },
+  "Turkey": { iso: "TR", display: "Turkey" },
+  "Iran": { iso: "IR", display: "Iran" },
+  "Malaysia": { iso: "MY", display: "Malaysia" },
+  "Philippines": { iso: "PH", display: "Philippines" },
+  "Sweden": { iso: "SE", display: "Sweden" },
+  "Colombia": { iso: "CO", display: "Colombia" },
+  "Argentina": { iso: "AR", display: "Argentina" },
+  "Papua New Guinea": { iso: "PG", display: "PNG" },
+};
+
+function isoToFlag(iso: string): string {
+  return iso
+    .toUpperCase()
+    .split("")
+    .map((c) => String.fromCodePoint(127397 + c.charCodeAt(0)))
+    .join("");
+}
+
+export type CountryChip = {
+  country: string;
+  display: string;
+  flag: string;
+  lng: number;
+  lat: number;
+  k: number;
+  airportCount: number;
+};
+
+/** Top 20 countries by airport count in the catalog, with centroid + a
+ *  zoom level derived from the airports' bounding-box span. */
+export const TOP_COUNTRIES: CountryChip[] = (() => {
+  type Acc = { count: number; sumLng: number; sumLat: number; minLng: number; maxLng: number; minLat: number; maxLat: number };
+  const byCountry = new Map<string, Acc>();
+  for (const code in AIRPORTS) {
+    const country = AIRPORTS[code].country;
+    const ll = AIRPORT_LATLNG[code];
+    if (!ll) continue;
+    const [lng, lat] = ll;
+    let a = byCountry.get(country);
+    if (!a) {
+      a = { count: 0, sumLng: 0, sumLat: 0, minLng: lng, maxLng: lng, minLat: lat, maxLat: lat };
+      byCountry.set(country, a);
+    }
+    a.count++;
+    a.sumLng += lng;
+    a.sumLat += lat;
+    if (lng < a.minLng) a.minLng = lng;
+    if (lng > a.maxLng) a.maxLng = lng;
+    if (lat < a.minLat) a.minLat = lat;
+    if (lat > a.maxLat) a.maxLat = lat;
+  }
+  const out: CountryChip[] = [];
+  for (const [country, a] of byCountry) {
+    const meta = COUNTRY_META[country];
+    if (!meta) continue;
+    const lngSpan = a.maxLng - a.minLng;
+    const latSpan = a.maxLat - a.minLat;
+    // Derive zoom from the larger axis; clamped to a sane on-map range.
+    const span = Math.max(lngSpan, latSpan * 1.6);
+    const k = Math.max(2.2, Math.min(7, 65 / Math.max(span, 5)));
+    out.push({
+      country,
+      display: meta.display,
+      flag: isoToFlag(meta.iso),
+      lng: a.sumLng / a.count,
+      lat: a.sumLat / a.count,
+      k: Number(k.toFixed(2)),
+      airportCount: a.count,
+    });
+  }
+  out.sort((x, y) => y.airportCount - x.airportCount);
+  return out.slice(0, 20);
+})();
+
 /**
  * True if `airline` actually flies to `airport` (per the hand-curated served
  * sets above). Used by the flight generator to decide whether each carrier

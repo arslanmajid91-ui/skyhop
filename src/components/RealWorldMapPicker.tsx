@@ -10,7 +10,7 @@ import { zoom as d3zoom, zoomIdentity, type ZoomBehavior, type ZoomTransform } f
 import Supercluster from "supercluster";
 import type { ClusterFeature, PointFeature } from "supercluster";
 import countries110m from "world-atlas/countries-110m.json";
-import { AIRPORTS, AIRPORT_LIST, AIRPORT_LATLNG } from "@/lib/airlines";
+import { AIRPORTS, AIRPORT_LIST, AIRPORT_LATLNG, TOP_COUNTRIES } from "@/lib/airlines";
 
 type Props = {
   from: string;
@@ -36,18 +36,8 @@ const CONTINENT_LABELS: Array<{ name: string; lng: number; lat: number }> = [
   { name: "Oceania", lng: 134, lat: -27 },
 ];
 
-// Quick-jump regions for the map header. Each click smooth-zooms to the
-// region's centroid at the given zoom level.
-const REGIONS: Array<{ name: string; lng: number; lat: number; k: number; flag: string }> = [
-  { name: "World",      lng: 10,   lat: 25,   k: 1,    flag: "🌍" },
-  { name: "USA",        lng: -98,  lat: 38,   k: 3.6,  flag: "🇺🇸" },
-  { name: "Canada",     lng: -100, lat: 56,   k: 3.0,  flag: "🇨🇦" },
-  { name: "Europe",     lng: 15,   lat: 50,   k: 3.8,  flag: "🇪🇺" },
-  { name: "Russia",     lng: 90,   lat: 60,   k: 2.6,  flag: "🇷🇺" },
-  { name: "S Asia",     lng: 78,   lat: 22,   k: 4.0,  flag: "🇮🇳" },
-  { name: "M East",     lng: 47,   lat: 28,   k: 4.2,  flag: "🕌" },
-  { name: "Australia",  lng: 134,  lat: -25,  k: 3.4,  flag: "🇦🇺" },
-];
+// World jump (kept at top so users have a one-click way back to global view).
+const WORLD_VIEW = { display: "World", flag: "🌍", lng: 10, lat: 25, k: 1 };
 
 type AirportProps = { code: string; city: string };
 
@@ -248,6 +238,13 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
     select(svg).transition().duration(300).call(z.transform, zoomIdentity);
   }
 
+  function zoomByFactor(factor: number) {
+    const svg = svgRef.current;
+    const z = zoomBehaviorRef.current;
+    if (!svg || !z) return;
+    select(svg).transition().duration(220).call(z.scaleBy, factor);
+  }
+
   // --- Flight arc ------------------------------------------------------------
   const arcPath = useMemo(() => {
     const a = AIRPORT_LATLNG[from];
@@ -317,21 +314,21 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
             📍 Pick TO
           </button>
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-1">
-          {REGIONS.map((r) => {
-            const xy = projection([r.lng, r.lat]);
+        <div className="flex max-w-full flex-wrap items-center justify-end gap-1">
+          {[WORLD_VIEW, ...TOP_COUNTRIES].map((c) => {
+            const xy = projection([c.lng, c.lat]);
             return (
               <button
-                key={r.name}
+                key={c.display}
                 type="button"
                 onClick={() => {
-                  if (xy) zoomTo(r.k, xy[0], xy[1], 550);
+                  if (xy) zoomTo(c.k, xy[0], xy[1], 550);
                 }}
-                aria-label={`Zoom to ${r.name}`}
+                aria-label={`Zoom to ${c.display}`}
                 className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-zinc-700 ring-1 ring-zinc-200 transition hover:bg-indigo-50 hover:text-indigo-700 hover:ring-indigo-200 active:scale-95 dark:bg-zinc-800 dark:text-zinc-200 dark:ring-zinc-700 dark:hover:bg-indigo-950 dark:hover:text-indigo-300"
               >
-                <span aria-hidden>{r.flag}</span>
-                {r.name}
+                <span aria-hidden>{c.flag}</span>
+                {c.display}
               </button>
             );
           })}
@@ -342,9 +339,31 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
         <span className="text-zinc-400">· scroll / pinch to zoom, drag to pan, tap clusters to drill in</span>
       </p>
 
-      <svg
-        ref={svgRef}
-        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+      <div className="relative">
+        {/* Floating zoom controls (top-right of the map) */}
+        <div className="absolute right-3 top-3 z-10 flex flex-col gap-1 rounded-full bg-white/95 p-1 shadow-md ring-1 ring-zinc-200 backdrop-blur dark:bg-zinc-900/95 dark:ring-zinc-700">
+          <button
+            type="button"
+            onClick={() => zoomByFactor(1.5)}
+            aria-label="Zoom in"
+            className="flex h-7 w-7 items-center justify-center rounded-full text-lg font-bold leading-none text-zinc-700 transition hover:bg-indigo-50 hover:text-indigo-700 active:scale-90 dark:text-zinc-200 dark:hover:bg-indigo-950 dark:hover:text-indigo-300"
+          >
+            +
+          </button>
+          <div className="mx-auto h-px w-4 bg-zinc-200 dark:bg-zinc-700" />
+          <button
+            type="button"
+            onClick={() => zoomByFactor(1 / 1.5)}
+            aria-label="Zoom out"
+            className="flex h-7 w-7 items-center justify-center rounded-full text-lg font-bold leading-none text-zinc-700 transition hover:bg-indigo-50 hover:text-indigo-700 active:scale-90 dark:text-zinc-200 dark:hover:bg-indigo-950 dark:hover:text-indigo-300"
+          >
+            −
+          </button>
+        </div>
+
+        <svg
+          ref={svgRef}
+          viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         className="block h-auto w-full cursor-grab select-none touch-none active:cursor-grabbing"
         role="img"
         aria-label="World map flight picker"
@@ -574,7 +593,8 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
             })}
           </g>
         </g>
-      </svg>
+        </svg>
+      </div>
 
       <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs">
         {/* FROM chip — picked: pill + clear (×); empty: dashed placeholder */}
