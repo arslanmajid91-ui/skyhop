@@ -134,15 +134,33 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
       lat: number;
     }> = [];
 
+    // Label tier escalates with zoom: continent → country → city. Same
+    // cluster picks a more specific label as the user drills in.
+    const labelTier: "continent" | "country" | "city" =
+      transform.k < 2 ? "continent" : transform.k < 4.5 ? "country" : "city";
+
+    function nearestContinentShort(lng: number, lat: number): string {
+      let nearest = CONTINENTS[0];
+      let nd = Infinity;
+      for (const c of CONTINENTS) {
+        const d = (c.lng - lng) ** 2 + (c.lat - lat) ** 2;
+        if (d < nd) {
+          nd = d;
+          nearest = c;
+        }
+      }
+      return nearest.short;
+    }
+
     function clusterLabel(clusterId: number, lng: number, lat: number, count: number): string {
-      // Country-first naming with a city tiebreaker. Sample up to 100 leaves:
-      //   - if one country covers >50% of the sample → use the country name
-      //     (USA, China, Russia, UK, etc.)
-      //   - if a country dominates AND there are sibling clusters in the same
-      //     country (we can't know that here directly, so we always disambiguate
-      //     with the busiest city in the cluster) → "USA · Atlanta"
-      //   - otherwise → "Europe · 450" / "Africa · 56" using nearest continent.
       const leaves = index.getLeaves(clusterId, 100) as PointFeature<AirportProps>[];
+
+      // Continent tier — coarse, never falls back further.
+      if (labelTier === "continent") {
+        return `${nearestContinentShort(lng, lat)} · ${count}`;
+      }
+
+      // Compute the two finer-grained candidates once.
       const counts = new Map<string, number>();
       let busiestCode = "";
       let busiestRouteN = -1;
@@ -164,24 +182,22 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
           topCountry = c;
         }
       }
+      const dominantCountry =
+        topCountry && topN / leaves.length > 0.5
+          ? COUNTRY_META[topCountry]?.display ?? topCountry
+          : null;
       const busiestCity = busiestCode ? AIRPORTS[busiestCode]?.city ?? "" : "";
-      if (topCountry && topN / leaves.length > 0.5) {
-        const display = COUNTRY_META[topCountry]?.display ?? topCountry;
-        // Suffix with the busiest city so multiple clusters inside the same
-        // country are distinguishable ("USA · Atlanta", "USA · Chicago").
-        return busiestCity ? `${display} · ${busiestCity}` : display;
+
+      // Country tier — prefer the country name; fall back to continent if mixed.
+      if (labelTier === "country") {
+        if (dominantCountry) return `${dominantCountry} · ${count}`;
+        return `${nearestContinentShort(lng, lat)} · ${count}`;
       }
-      // No country dominates — pick the nearest continent.
-      let nearest = CONTINENTS[0];
-      let nd = Infinity;
-      for (const c of CONTINENTS) {
-        const d = (c.lng - lng) ** 2 + (c.lat - lat) ** 2;
-        if (d < nd) {
-          nd = d;
-          nearest = c;
-        }
-      }
-      return `${nearest.short} · ${count}`;
+
+      // City tier — prefer the busiest city; fall back to country, then continent.
+      if (busiestCity) return count > 1 ? `${busiestCity} · ${count}` : busiestCity;
+      if (dominantCountry) return `${dominantCountry} · ${count}`;
+      return `${nearestContinentShort(lng, lat)} · ${count}`;
     }
 
     for (const f of clusterFeatures) {
@@ -220,7 +236,9 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
     }
 
     return { soloPoints: solos, displayedClusters: clusters };
-  }, [clusterFeatures, projection, from, to]);
+    // transform.k drives labelTier; include it so the memo recomputes when
+    // crossing a tier boundary (continent → country → city).
+  }, [clusterFeatures, projection, from, to, transform.k]);
 
   // --- d3-zoom wiring --------------------------------------------------------
   useEffect(() => {
