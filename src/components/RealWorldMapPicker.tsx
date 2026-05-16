@@ -36,6 +36,19 @@ const CONTINENT_LABELS: Array<{ name: string; lng: number; lat: number }> = [
   { name: "Oceania", lng: 134, lat: -27 },
 ];
 
+// Quick-jump regions for the map header. Each click smooth-zooms to the
+// region's centroid at the given zoom level.
+const REGIONS: Array<{ name: string; lng: number; lat: number; k: number; flag: string }> = [
+  { name: "World",      lng: 10,   lat: 25,   k: 1,    flag: "🌍" },
+  { name: "USA",        lng: -98,  lat: 38,   k: 3.6,  flag: "🇺🇸" },
+  { name: "Canada",     lng: -100, lat: 56,   k: 3.0,  flag: "🇨🇦" },
+  { name: "Europe",     lng: 15,   lat: 50,   k: 3.8,  flag: "🇪🇺" },
+  { name: "Russia",     lng: 90,   lat: 60,   k: 2.6,  flag: "🇷🇺" },
+  { name: "S Asia",     lng: 78,   lat: 22,   k: 4.0,  flag: "🇮🇳" },
+  { name: "M East",     lng: 47,   lat: 28,   k: 4.2,  flag: "🕌" },
+  { name: "Australia",  lng: 134,  lat: -25,  k: 3.4,  flag: "🇦🇺" },
+];
+
 type AirportProps = { code: string; city: string };
 
 /**
@@ -228,13 +241,6 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
     zoomTo(targetK, x, y);
   }
 
-  function zoomByFactor(factor: number) {
-    const svg = svgRef.current;
-    const z = zoomBehaviorRef.current;
-    if (!svg || !z) return;
-    select(svg).transition().duration(220).call(z.scaleBy, factor);
-  }
-
   function resetView() {
     const svg = svgRef.current;
     const z = zoomBehaviorRef.current;
@@ -311,20 +317,24 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
             📍 Pick TO
           </button>
         </div>
-        <div className="flex items-center gap-1.5">
-          <ZoomBtn label="−" ariaLabel="Zoom out" onClick={() => zoomByFactor(1 / 1.4)} />
-          <span className="min-w-[3.5rem] text-center text-[11px] font-bold tabular-nums text-zinc-600 dark:text-zinc-400">
-            {k.toFixed(1)}×
-          </span>
-          <ZoomBtn label="+" ariaLabel="Zoom in" onClick={() => zoomByFactor(1.4)} />
-          <button
-            type="button"
-            onClick={resetView}
-            className="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-zinc-600 ring-1 ring-zinc-200 hover:bg-zinc-50 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-700"
-            aria-label="Reset map view"
-          >
-            Reset
-          </button>
+        <div className="flex flex-wrap items-center justify-end gap-1">
+          {REGIONS.map((r) => {
+            const xy = projection([r.lng, r.lat]);
+            return (
+              <button
+                key={r.name}
+                type="button"
+                onClick={() => {
+                  if (xy) zoomTo(r.k, xy[0], xy[1], 550);
+                }}
+                aria-label={`Zoom to ${r.name}`}
+                className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-zinc-700 ring-1 ring-zinc-200 transition hover:bg-indigo-50 hover:text-indigo-700 hover:ring-indigo-200 active:scale-95 dark:bg-zinc-800 dark:text-zinc-200 dark:ring-zinc-700 dark:hover:bg-indigo-950 dark:hover:text-indigo-300"
+              >
+                <span aria-hidden>{r.flag}</span>
+                {r.name}
+              </button>
+            );
+          })}
         </div>
       </div>
       <p className="mb-2 px-1 text-[11px] font-medium text-zinc-600 dark:text-zinc-400">
@@ -679,23 +689,3 @@ function FlyingPlane({ k }: { k: number }) {
   );
 }
 
-function ZoomBtn({
-  label,
-  ariaLabel,
-  onClick,
-}: {
-  label: string;
-  ariaLabel: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={ariaLabel}
-      className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-base font-bold leading-none text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-50 dark:bg-zinc-800 dark:text-zinc-200 dark:ring-zinc-700"
-    >
-      {label}
-    </button>
-  );
-}
