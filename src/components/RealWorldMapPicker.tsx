@@ -46,6 +46,77 @@ const CONTINENTS: Array<{ name: string; short: string; lng: number; lat: number;
 // World jump (kept at top so users have a one-click way back to global view).
 const WORLD_VIEW = { display: "World", flag: "🌍", lng: 10, lat: 25, k: 1 };
 
+// 50 US states + DC: name and hand-picked centroid. Used only for state-level
+// cluster labels when zoomed inside the USA. "Nearest centroid" assignment is
+// plenty accurate for picking a representative label, with tiny error at
+// state borders.
+const US_STATES: Array<{ name: string; lng: number; lat: number }> = [
+  { name: "Alabama",        lng: -86.79, lat: 32.81 },
+  { name: "Alaska",         lng: -152.40, lat: 64.20 },
+  { name: "Arizona",        lng: -111.66, lat: 34.17 },
+  { name: "Arkansas",       lng: -92.44, lat: 34.97 },
+  { name: "California",     lng: -119.68, lat: 36.78 },
+  { name: "Colorado",       lng: -105.55, lat: 39.06 },
+  { name: "Connecticut",    lng: -72.76, lat: 41.60 },
+  { name: "Delaware",       lng: -75.51, lat: 38.99 },
+  { name: "DC",             lng: -77.04, lat: 38.91 },
+  { name: "Florida",        lng: -81.69, lat: 28.63 },
+  { name: "Georgia",        lng: -83.64, lat: 32.66 },
+  { name: "Hawaii",         lng: -157.50, lat: 21.09 },
+  { name: "Idaho",          lng: -114.48, lat: 44.24 },
+  { name: "Illinois",       lng: -88.99, lat: 40.35 },
+  { name: "Indiana",        lng: -86.26, lat: 39.85 },
+  { name: "Iowa",           lng: -93.21, lat: 42.01 },
+  { name: "Kansas",         lng: -96.73, lat: 38.53 },
+  { name: "Kentucky",       lng: -84.67, lat: 37.67 },
+  { name: "Louisiana",      lng: -91.87, lat: 31.17 },
+  { name: "Maine",          lng: -69.38, lat: 44.69 },
+  { name: "Maryland",       lng: -76.80, lat: 39.06 },
+  { name: "Massachusetts",  lng: -71.53, lat: 42.23 },
+  { name: "Michigan",       lng: -84.54, lat: 43.33 },
+  { name: "Minnesota",      lng: -93.90, lat: 45.69 },
+  { name: "Mississippi",    lng: -89.68, lat: 32.74 },
+  { name: "Missouri",       lng: -92.29, lat: 38.46 },
+  { name: "Montana",        lng: -110.45, lat: 46.92 },
+  { name: "Nebraska",       lng: -98.27, lat: 41.13 },
+  { name: "Nevada",         lng: -117.06, lat: 38.31 },
+  { name: "New Hampshire",  lng: -71.56, lat: 43.45 },
+  { name: "New Jersey",     lng: -74.52, lat: 40.30 },
+  { name: "New Mexico",     lng: -106.25, lat: 34.84 },
+  { name: "New York",       lng: -74.95, lat: 42.17 },
+  { name: "North Carolina", lng: -79.81, lat: 35.63 },
+  { name: "North Dakota",   lng: -99.78, lat: 47.53 },
+  { name: "Ohio",           lng: -82.76, lat: 40.39 },
+  { name: "Oklahoma",       lng: -96.93, lat: 35.57 },
+  { name: "Oregon",         lng: -122.07, lat: 44.57 },
+  { name: "Pennsylvania",   lng: -77.21, lat: 40.59 },
+  { name: "Rhode Island",   lng: -71.51, lat: 41.68 },
+  { name: "South Carolina", lng: -80.95, lat: 33.86 },
+  { name: "South Dakota",   lng: -99.44, lat: 44.30 },
+  { name: "Tennessee",      lng: -86.69, lat: 35.75 },
+  { name: "Texas",          lng: -97.56, lat: 31.05 },
+  { name: "Utah",           lng: -111.86, lat: 40.15 },
+  { name: "Vermont",        lng: -72.71, lat: 44.05 },
+  { name: "Virginia",       lng: -78.17, lat: 37.77 },
+  { name: "Washington",     lng: -121.49, lat: 47.40 },
+  { name: "West Virginia",  lng: -80.95, lat: 38.49 },
+  { name: "Wisconsin",      lng: -89.62, lat: 44.27 },
+  { name: "Wyoming",        lng: -107.30, lat: 42.76 },
+];
+
+function nearestUsState(lng: number, lat: number): string {
+  let best = US_STATES[0];
+  let bestD = Infinity;
+  for (const s of US_STATES) {
+    const d = (s.lng - lng) ** 2 + (s.lat - lat) ** 2;
+    if (d < bestD) {
+      bestD = d;
+      best = s;
+    }
+  }
+  return best.name;
+}
+
 type AirportProps = { code: string; city: string };
 
 /**
@@ -104,6 +175,10 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
   // log2(k)*2 gives 8 discrete clustering levels across our range — enough
   // resolution that the cluster set changes smoothly as the user zooms.
   function kToClusterZoom(k: number) {
+    // At city-tier zoom (k≥5) request supZoom beyond supercluster's maxZoom (8)
+    // so all clusters dissolve into individual airport pins — fixes the
+    // "click cluster at high zoom does nothing" case.
+    if (k >= 5) return 9;
     return Math.max(0, Math.min(8, Math.floor(Math.log2(k) * 2)));
   }
 
@@ -188,8 +263,29 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
           : null;
       const busiestCity = busiestCode ? AIRPORTS[busiestCode]?.city ?? "" : "";
 
-      // Country tier — prefer the country name; fall back to continent if mixed.
+      // Country tier — prefer the country name; if the dominant country is
+      // the USA, also count by US state so sibling clusters disambiguate
+      // ("Texas · 13" vs "Florida · 11" instead of "USA · 13" everywhere).
       if (labelTier === "country") {
+        if (dominantCountry === "USA") {
+          const stateCounts = new Map<string, number>();
+          for (const leaf of leaves) {
+            const code = leaf.properties.code;
+            if (AIRPORTS[code]?.country !== "United States") continue;
+            const [lLng, lLat] = leaf.geometry.coordinates;
+            const state = nearestUsState(lLng, lLat);
+            stateCounts.set(state, (stateCounts.get(state) ?? 0) + 1);
+          }
+          let topState = "";
+          let topStateN = 0;
+          for (const [s, n] of stateCounts) {
+            if (n > topStateN) {
+              topStateN = n;
+              topState = s;
+            }
+          }
+          if (topState) return `${topState} · ${count}`;
+        }
         if (dominantCountry) return `${dominantCountry} · ${count}`;
         return `${nearestContinentShort(lng, lat)} · ${count}`;
       }
