@@ -24,16 +24,16 @@ const MIN_K = 1;
 const MAX_K = 8;
 const CLUSTER_RADIUS_PX = 55;
 
-// Continent label centroids (lng, lat). Placed by eye on the Mercator
-// projection — not geographic centroids, just visually balanced positions
-// over the largest continental landmass.
-const CONTINENT_LABELS: Array<{ name: string; lng: number; lat: number }> = [
-  { name: "North America", lng: -95, lat: 42 },
-  { name: "South America", lng: -58, lat: -12 },
-  { name: "Europe", lng: 12, lat: 52 },
-  { name: "Africa", lng: 22, lat: 3 },
-  { name: "Asia", lng: 90, lat: 42 },
-  { name: "Oceania", lng: 134, lat: -27 },
+// Continent metadata: label position + jump target zoom level. The text
+// labels on the map use lng/lat; the floating quick-zoom buttons use
+// lng/lat + k. Single source of truth.
+const CONTINENTS: Array<{ name: string; short: string; lng: number; lat: number; k: number }> = [
+  { name: "North America", short: "N America", lng: -95, lat: 42,  k: 2.4 },
+  { name: "South America", short: "S America", lng: -58, lat: -12, k: 2.6 },
+  { name: "Europe",        short: "Europe",    lng: 12,  lat: 52,  k: 3.8 },
+  { name: "Africa",        short: "Africa",    lng: 22,  lat: 3,   k: 2.6 },
+  { name: "Asia",          short: "Asia",      lng: 90,  lat: 42,  k: 2.2 },
+  { name: "Oceania",       short: "Oceania",   lng: 134, lat: -27, k: 3.0 },
 ];
 
 // World jump (kept at top so users have a one-click way back to global view).
@@ -238,13 +238,6 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
     select(svg).transition().duration(300).call(z.transform, zoomIdentity);
   }
 
-  function zoomByFactor(factor: number) {
-    const svg = svgRef.current;
-    const z = zoomBehaviorRef.current;
-    if (!svg || !z) return;
-    select(svg).transition().duration(220).call(z.scaleBy, factor);
-  }
-
   // --- Flight arc ------------------------------------------------------------
   const arcPath = useMemo(() => {
     const a = AIRPORT_LATLNG[from];
@@ -340,25 +333,24 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
       </p>
 
       <div className="relative">
-        {/* Floating zoom controls (top-right of the map) */}
-        <div className="absolute right-3 top-3 z-10 flex flex-col gap-1 rounded-full bg-white/95 p-1 shadow-md ring-1 ring-zinc-200 backdrop-blur dark:bg-zinc-900/95 dark:ring-zinc-700">
-          <button
-            type="button"
-            onClick={() => zoomByFactor(1.5)}
-            aria-label="Zoom in"
-            className="flex h-7 w-7 items-center justify-center rounded-full text-lg font-bold leading-none text-zinc-700 transition hover:bg-indigo-50 hover:text-indigo-700 active:scale-90 dark:text-zinc-200 dark:hover:bg-indigo-950 dark:hover:text-indigo-300"
-          >
-            +
-          </button>
-          <div className="mx-auto h-px w-4 bg-zinc-200 dark:bg-zinc-700" />
-          <button
-            type="button"
-            onClick={() => zoomByFactor(1 / 1.5)}
-            aria-label="Zoom out"
-            className="flex h-7 w-7 items-center justify-center rounded-full text-lg font-bold leading-none text-zinc-700 transition hover:bg-indigo-50 hover:text-indigo-700 active:scale-90 dark:text-zinc-200 dark:hover:bg-indigo-950 dark:hover:text-indigo-300"
-          >
-            −
-          </button>
+        {/* Floating continent quick-zoom (top-right of the map) */}
+        <div className="absolute right-3 top-3 z-10 flex flex-col gap-0.5 rounded-2xl bg-white/95 p-1.5 shadow-md ring-1 ring-zinc-200 backdrop-blur dark:bg-zinc-900/95 dark:ring-zinc-700">
+          {CONTINENTS.map((c) => {
+            const xy = projection([c.lng, c.lat]);
+            return (
+              <button
+                key={c.name}
+                type="button"
+                onClick={() => {
+                  if (xy) zoomTo(c.k, xy[0], xy[1], 550);
+                }}
+                aria-label={`Zoom to ${c.name}`}
+                className="rounded-md px-2 py-1 text-left text-[11px] font-bold text-zinc-700 transition hover:bg-indigo-50 hover:text-indigo-700 active:scale-95 dark:text-zinc-200 dark:hover:bg-indigo-950 dark:hover:text-indigo-300"
+              >
+                {c.short}
+              </button>
+            );
+          })}
         </div>
 
         <svg
@@ -426,7 +418,7 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
                 zooms in past continent-level so they never clutter country
                 or city views. */}
             <g pointerEvents="none">
-              {CONTINENT_LABELS.map((c) => {
+              {CONTINENTS.map((c) => {
                 const xy = projection([c.lng, c.lat]);
                 if (!xy) return null;
                 const opacity = Math.max(0, 0.45 - (k - 1) * 0.22);
