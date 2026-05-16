@@ -127,6 +127,14 @@ body += "export const AIRPORT_LATLNG_GENERATED: Record<string, [number, number]>
 for (const a of final) {
   body += `  ${a.code}: [${a.lng.toFixed(4)}, ${a.lat.toFixed(4)}],\n`;
 }
+body += "};\n\n";
+
+body += "/** Total routes (src+dst across all airlines) per airport — proxy for\n";
+body += " * 'busyness' used by the map to pick representative cluster names. */\n";
+body += "export const AIRPORT_ROUTE_COUNT_GENERATED: Record<string, number> = {\n";
+for (const a of final) {
+  body += `  ${a.code}: ${routeCount.get(a.code) ?? 0},\n`;
+}
 body += "};\n";
 
 const out = `// AUTO-GENERATED FILE — do not edit by hand.

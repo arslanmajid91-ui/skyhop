@@ -10,7 +10,14 @@ import { zoom as d3zoom, zoomIdentity, type ZoomBehavior, type ZoomTransform } f
 import Supercluster from "supercluster";
 import type { ClusterFeature, PointFeature } from "supercluster";
 import countries110m from "world-atlas/countries-110m.json";
-import { AIRPORTS, AIRPORT_LIST, AIRPORT_LATLNG, TOP_COUNTRIES, COUNTRY_META } from "@/lib/airlines";
+import {
+  AIRPORTS,
+  AIRPORT_LIST,
+  AIRPORT_LATLNG,
+  AIRPORT_ROUTE_COUNT,
+  TOP_COUNTRIES,
+  COUNTRY_META,
+} from "@/lib/airlines";
 
 type Props = {
   from: string;
@@ -128,36 +135,53 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
     }> = [];
 
     function clusterLabel(clusterId: number, lng: number, lat: number, count: number): string {
-      // Sample up to 100 leaves and find the airport closest to the
-      // cluster centroid — that city becomes the cluster's primary label.
-      // This gives specific, non-repetitive names: a cluster of 13
-      // Australian airports near Sydney reads "Sydney · 13" instead of
-      // yet another "Australia" badge.
+      // Country-first naming with a city tiebreaker. Sample up to 100 leaves:
+      //   - if one country covers >50% of the sample → use the country name
+      //     (USA, China, Russia, UK, etc.)
+      //   - if a country dominates AND there are sibling clusters in the same
+      //     country (we can't know that here directly, so we always disambiguate
+      //     with the busiest city in the cluster) → "USA · Atlanta"
+      //   - otherwise → "Europe · 450" / "Africa · 56" using nearest continent.
       const leaves = index.getLeaves(clusterId, 100) as PointFeature<AirportProps>[];
-      let nearestCity = "";
-      let nearestD = Infinity;
+      const counts = new Map<string, number>();
+      let busiestCode = "";
+      let busiestRouteN = -1;
       for (const leaf of leaves) {
-        const [lLng, lLat] = leaf.geometry.coordinates;
-        const d = (lLng - lng) ** 2 + (lLat - lat) ** 2;
-        if (d < nearestD) {
-          nearestD = d;
-          nearestCity = leaf.properties.city;
+        const code = leaf.properties.code;
+        const country = AIRPORTS[code]?.country;
+        if (country) counts.set(country, (counts.get(country) ?? 0) + 1);
+        const r = AIRPORT_ROUTE_COUNT[code] ?? 0;
+        if (r > busiestRouteN) {
+          busiestRouteN = r;
+          busiestCode = code;
         }
       }
-      if (!nearestCity) {
-        // Fallback: closest continent name + count.
-        let nearest = CONTINENTS[0];
-        let nd = Infinity;
-        for (const c of CONTINENTS) {
-          const d = (c.lng - lng) ** 2 + (c.lat - lat) ** 2;
-          if (d < nd) {
-            nd = d;
-            nearest = c;
-          }
+      let topCountry = "";
+      let topN = 0;
+      for (const [c, n] of counts) {
+        if (n > topN) {
+          topN = n;
+          topCountry = c;
         }
-        return `${nearest.short} · ${count}`;
       }
-      return count > 1 ? `${nearestCity} · ${count}` : nearestCity;
+      const busiestCity = busiestCode ? AIRPORTS[busiestCode]?.city ?? "" : "";
+      if (topCountry && topN / leaves.length > 0.5) {
+        const display = COUNTRY_META[topCountry]?.display ?? topCountry;
+        // Suffix with the busiest city so multiple clusters inside the same
+        // country are distinguishable ("USA · Atlanta", "USA · Chicago").
+        return busiestCity ? `${display} · ${busiestCity}` : display;
+      }
+      // No country dominates — pick the nearest continent.
+      let nearest = CONTINENTS[0];
+      let nd = Infinity;
+      for (const c of CONTINENTS) {
+        const d = (c.lng - lng) ** 2 + (c.lat - lat) ** 2;
+        if (d < nd) {
+          nd = d;
+          nearest = c;
+        }
+      }
+      return `${nearest.short} · ${count}`;
     }
 
     for (const f of clusterFeatures) {

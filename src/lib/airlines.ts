@@ -1,4 +1,8 @@
-import { AIRPORTS_GENERATED, AIRPORT_LATLNG_GENERATED } from "./airports.generated";
+import { AIRPORTS_GENERATED, AIRPORT_LATLNG_GENERATED, AIRPORT_ROUTE_COUNT_GENERATED } from "./airports.generated";
+
+/** Per-airport route count (src+dst across all airlines in OpenFlights).
+ *  Proxy for "busyness" — used to pick representative cities in cluster labels. */
+export const AIRPORT_ROUTE_COUNT: Record<string, number> = AIRPORT_ROUTE_COUNT_GENERATED;
 
 export type AirlineCode = "EK" | "EY" | "QR" | "TK";
 
