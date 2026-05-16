@@ -10,7 +10,7 @@ import { zoom as d3zoom, zoomIdentity, type ZoomBehavior, type ZoomTransform } f
 import Supercluster from "supercluster";
 import type { ClusterFeature, PointFeature } from "supercluster";
 import countries110m from "world-atlas/countries-110m.json";
-import { AIRPORTS, AIRPORT_LIST, AIRPORT_LATLNG, TOP_COUNTRIES } from "@/lib/airlines";
+import { AIRPORTS, AIRPORT_LIST, AIRPORT_LATLNG, TOP_COUNTRIES, COUNTRY_META } from "@/lib/airlines";
 
 type Props = {
   from: string;
@@ -120,11 +120,48 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
     const clusters: Array<{
       id: number;
       count: number;
+      label: string;
       x: number;
       y: number;
       lng: number;
       lat: number;
     }> = [];
+
+    function clusterLabel(clusterId: number, lng: number, lat: number, count: number): string {
+      // Look at up to 50 leaves and pick the dominant country. If it covers
+      // >50% of the sample, name the cluster after the country; otherwise
+      // fall back to the nearest continent.
+      const leaves = index.getLeaves(clusterId, 50) as PointFeature<AirportProps>[];
+      const counts = new Map<string, number>();
+      for (const leaf of leaves) {
+        const code = leaf.properties.code;
+        const country = AIRPORTS[code]?.country;
+        if (!country) continue;
+        counts.set(country, (counts.get(country) ?? 0) + 1);
+      }
+      let topCountry = "";
+      let topN = 0;
+      for (const [c, n] of counts) {
+        if (n > topN) {
+          topN = n;
+          topCountry = c;
+        }
+      }
+      if (topCountry && topN / leaves.length > 0.5) {
+        return COUNTRY_META[topCountry]?.display ?? topCountry;
+      }
+      // No country dominates — pick the closest continent centroid.
+      let nearest = CONTINENTS[0];
+      let nearestD = Infinity;
+      for (const c of CONTINENTS) {
+        const d = (c.lng - lng) ** 2 + (c.lat - lat) ** 2;
+        if (d < nearestD) {
+          nearestD = d;
+          nearest = c;
+        }
+      }
+      return `${nearest.short} · ${count}`;
+    }
 
     for (const f of clusterFeatures) {
       const [lng, lat] = f.geometry.coordinates;
@@ -133,9 +170,12 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
       const [x, y] = xy;
       const props = f.properties as { cluster?: boolean; cluster_id?: number; point_count?: number } & AirportProps;
       if (props.cluster) {
+        const id = (f as ClusterFeature<AirportProps>).properties.cluster_id;
+        const count = props.point_count ?? 0;
         clusters.push({
-          id: (f as ClusterFeature<AirportProps>).properties.cluster_id,
-          count: props.point_count ?? 0,
+          id,
+          count,
+          label: clusterLabel(id, lng, lat, count),
           x,
           y,
           lng,
@@ -487,26 +527,48 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
               </g>
             )}
 
-            {/* Cluster badges first, individual pins on top */}
+            {/* Cluster badges — pill-shaped with the dominant country (or
+                continent) name. Width sized to the label, height stays
+                consistent. Bigger clusters get a slightly bigger pill. */}
             {displayedClusters.map((c) => {
-              const radius = Math.min(20, 11 + Math.log2(c.count) * 2.6) / k;
-              const fontSize = Math.min(14, 10 + Math.log2(c.count) * 1.4) / k;
+              const fontSize = Math.min(13, 9 + Math.log2(c.count) * 0.8) / k;
+              const charW = fontSize * 0.58;
+              const padX = 8 / k;
+              const padY = 4 / k;
+              const w = c.label.length * charW + padX * 2;
+              const h = fontSize + padY * 2;
+              const rx = h / 2;
               return (
                 <g key={`c-${c.id}`} transform={`translate(${c.x.toFixed(3)} ${c.y.toFixed(3)})`} className="cursor-pointer">
-                  <circle r={radius * 1.55} fill="#a855f7" opacity="0.18" pointerEvents="none" />
-                  <circle
-                    r={radius}
+                  {/* Soft halo */}
+                  <rect
+                    x={-w / 2 - 2 / k}
+                    y={-h / 2 - 2 / k}
+                    width={w + 4 / k}
+                    height={h + 4 / k}
+                    rx={rx + 2 / k}
+                    fill="#7c3aed"
+                    opacity="0.18"
+                    pointerEvents="none"
+                  />
+                  {/* Pill */}
+                  <rect
+                    x={-w / 2}
+                    y={-h / 2}
+                    width={w}
+                    height={h}
+                    rx={rx}
                     fill="#7c3aed"
                     stroke="#ffffff"
-                    strokeWidth={2 / k}
+                    strokeWidth={1.5 / k}
                     data-skyhop-interactive
                     onClick={(e) => {
                       e.stopPropagation();
                       expandCluster(c.id, c.x, c.y);
                     }}
                   >
-                    <title>{`${c.count} airports — click to zoom in`}</title>
-                  </circle>
+                    <title>{`${c.count} airports in ${c.label} — click to zoom in`}</title>
+                  </rect>
                   <text
                     x="0"
                     y={fontSize * 0.36}
@@ -515,9 +577,9 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
                     fontWeight="800"
                     fill="#ffffff"
                     pointerEvents="none"
-                    style={{ userSelect: "none" }}
+                    style={{ userSelect: "none", letterSpacing: 0.2 / k }}
                   >
-                    {c.count}
+                    {c.label}
                   </text>
                 </g>
               );

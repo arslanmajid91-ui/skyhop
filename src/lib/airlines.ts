@@ -127,7 +127,7 @@ export const AIRPORT_LATLNG: Record<string, [number, number]> = AIRPORT_LATLNG_G
 
 /** OpenFlights uses full country names; map them to 2-letter ISO codes
  *  for the emoji-flag formula. Only entries we display need to be here. */
-const COUNTRY_META: Record<string, { iso: string; display: string }> = {
+export const COUNTRY_META: Record<string, { iso: string; display: string }> = {
   "United States": { iso: "US", display: "USA" },
   "China": { iso: "CN", display: "China" },
   "Canada": { iso: "CA", display: "Canada" },
