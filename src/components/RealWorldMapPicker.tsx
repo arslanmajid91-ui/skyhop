@@ -128,39 +128,36 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
     }> = [];
 
     function clusterLabel(clusterId: number, lng: number, lat: number, count: number): string {
-      // Look at up to 50 leaves and pick the dominant country. If it covers
-      // >50% of the sample, name the cluster after the country; otherwise
-      // fall back to the nearest continent.
-      const leaves = index.getLeaves(clusterId, 50) as PointFeature<AirportProps>[];
-      const counts = new Map<string, number>();
-      for (const leaf of leaves) {
-        const code = leaf.properties.code;
-        const country = AIRPORTS[code]?.country;
-        if (!country) continue;
-        counts.set(country, (counts.get(country) ?? 0) + 1);
-      }
-      let topCountry = "";
-      let topN = 0;
-      for (const [c, n] of counts) {
-        if (n > topN) {
-          topN = n;
-          topCountry = c;
-        }
-      }
-      if (topCountry && topN / leaves.length > 0.5) {
-        return COUNTRY_META[topCountry]?.display ?? topCountry;
-      }
-      // No country dominates — pick the closest continent centroid.
-      let nearest = CONTINENTS[0];
+      // Sample up to 100 leaves and find the airport closest to the
+      // cluster centroid — that city becomes the cluster's primary label.
+      // This gives specific, non-repetitive names: a cluster of 13
+      // Australian airports near Sydney reads "Sydney · 13" instead of
+      // yet another "Australia" badge.
+      const leaves = index.getLeaves(clusterId, 100) as PointFeature<AirportProps>[];
+      let nearestCity = "";
       let nearestD = Infinity;
-      for (const c of CONTINENTS) {
-        const d = (c.lng - lng) ** 2 + (c.lat - lat) ** 2;
+      for (const leaf of leaves) {
+        const [lLng, lLat] = leaf.geometry.coordinates;
+        const d = (lLng - lng) ** 2 + (lLat - lat) ** 2;
         if (d < nearestD) {
           nearestD = d;
-          nearest = c;
+          nearestCity = leaf.properties.city;
         }
       }
-      return `${nearest.short} · ${count}`;
+      if (!nearestCity) {
+        // Fallback: closest continent name + count.
+        let nearest = CONTINENTS[0];
+        let nd = Infinity;
+        for (const c of CONTINENTS) {
+          const d = (c.lng - lng) ** 2 + (c.lat - lat) ** 2;
+          if (d < nd) {
+            nd = d;
+            nearest = c;
+          }
+        }
+        return `${nearest.short} · ${count}`;
+      }
+      return count > 1 ? `${nearestCity} · ${count}` : nearestCity;
     }
 
     for (const f of clusterFeatures) {
