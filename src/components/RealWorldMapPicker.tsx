@@ -463,8 +463,8 @@ export default function RealWorldMapPicker({ from, to, onChange }: Props) {
                 return (
                   <text
                     key={c.name}
-                    x={xy[0]}
-                    y={xy[1]}
+                    x={xy[0].toFixed(3)}
+                    y={xy[1].toFixed(3)}
                     textAnchor="middle"
                     dominantBaseline="central"
                     fontSize={10 / k}
