@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AIRLINES, AIRPORTS } from "@/lib/airlines";
+import { AIRPORTS, getAirline } from "@/lib/airlines";
 import { findFlight } from "@/lib/flights";
 import { formatDate, formatPrice, formatTime } from "@/lib/format";
 import Header from "@/components/Header";
@@ -33,6 +33,7 @@ export default async function ConfirmationPage({
   const ref = bookingRef(flight.id);
   const first = flight.segments[0];
   const last = flight.segments[flight.segments.length - 1];
+  const airline = getAirline(flight.airline, flight.airlineName);
 
   return (
     <div className="flex-1 bg-zinc-50 dark:bg-zinc-950">
@@ -68,12 +69,12 @@ export default async function ConfirmationPage({
           <div className="mt-3 flex items-center gap-3">
             <div
               className="flex h-9 w-9 items-center justify-center rounded-md text-xs font-bold text-white"
-              style={{ backgroundColor: AIRLINES[flight.airline].color }}
+              style={{ backgroundColor: airline.color }}
             >
               {flight.airline}
             </div>
             <div>
-              <div className="font-medium">{AIRLINES[flight.airline].name}</div>
+              <div className="font-medium">{airline.name}</div>
               <div className="text-xs text-zinc-500">
                 {flight.segments.map((s) => s.flightNumber).join(" · ")}
               </div>

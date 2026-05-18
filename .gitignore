@@ -32,10 +32,15 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
 
+# runtime config written by the /settings page (contains API keys)
+.skyhop-config.json
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+/.edreams_chrome_data

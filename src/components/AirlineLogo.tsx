@@ -1,15 +1,17 @@
-import { AIRLINES, type AirlineCode } from "@/lib/airlines";
+import { getAirline, type AirlineCode } from "@/lib/airlines";
 
 export default function AirlineLogo({
   code,
+  name,
   size = 40,
   showName = false,
 }: {
   code: AirlineCode;
+  name?: string;
   size?: number;
   showName?: boolean;
 }) {
-  const a = AIRLINES[code];
+  const a = getAirline(code, name);
   return (
     <div className="flex items-center gap-2">
       <div

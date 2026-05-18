@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AIRLINES, AIRPORTS } from "@/lib/airlines";
+import { AIRPORTS, getAirline } from "@/lib/airlines";
 import { findFlight } from "@/lib/flights";
 import { formatDate, formatDuration, formatPrice, formatTime } from "@/lib/format";
 import AirlineLogo from "@/components/AirlineLogo";
@@ -17,6 +17,7 @@ export default async function FlightDetailPage({
 
   const first = flight.segments[0];
   const last = flight.segments[flight.segments.length - 1];
+  const airline = getAirline(flight.airline, flight.airlineName);
 
   return (
     <div className="flex-1 bg-zinc-50 dark:bg-zinc-950">
@@ -32,10 +33,10 @@ export default async function FlightDetailPage({
         <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3">
-              <AirlineLogo code={flight.airline} />
+              <AirlineLogo code={flight.airline} name={flight.airlineName} />
               <div>
                 <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-                  {AIRLINES[flight.airline].name}
+                  {airline.name}
                 </div>
                 <div className="text-sm text-zinc-500">
                   {AIRPORTS[first.from]?.city ?? first.from} →{" "}

@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 100)",
+      "PowerShell(Remove-Item *)",
+      "PowerShell(npx eslint src 2>&1 | Select-Object -First 80)",
+      "PowerShell(npm run *)",
+      "PowerShell($r = Invoke-WebRequest -Uri \"http://localhost:3001/flights?from=JFK`&to=DXB`&date=2026-06-01\" -UseBasicParsing; \"Status: $\\($r.StatusCode\\)`nLength: $\\($r.Content.Length\\)\")",
+      "PowerShell($r = Invoke-WebRequest -Uri \"http://localhost:3001/flights?from=JFK`&to=DXB`&date=2026-06-01\" -UseBasicParsing; $m = [regex]::Match\\($r.Content, 'href=\"/flights/\\([^\"]+\\)\"'\\); $id = $m.Groups[1].Value; \"First flight id \\(first 80 chars\\): $\\($id.Substring\\(0,[Math]::Min\\(80,$id.Length\\)\\)\\)...\"; \"Full length: $\\($id.Length\\)\"; $r2 = Invoke-WebRequest -Uri \"http://localhost:3001/flights/$id\" -UseBasicParsing; \"Detail status: $\\($r2.StatusCode\\), length: $\\($r2.Content.Length\\)\")",
+      "Bash(kill %bnj2ofgc4)",
+      "WebFetch(domain:developers.amadeus.com)",
+      "WebSearch",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 80)",
+      "WebFetch(domain:github.com)",
+      "PowerShell(npx --yes letsfg --help 2>&1)",
+      "PowerShell(npx --yes letsfg search JFK LAX 2026-06-15 --json 2>&1)",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"https://api.letsfg.co/v1/search?origin=JFK&destination=LAX&date=2026-06-15\" -UseBasicParsing -TimeoutSec 30; \"Status: $\\($r.StatusCode\\)\"; $r.Content.Substring\\(0,[Math]::Min\\(800,$r.Content.Length\\)\\) } catch { \"ERROR: $\\($_.Exception.Message\\)\"; if \\($_.Exception.Response\\) { \"HTTP: $\\([int]$_.Exception.Response.StatusCode\\)\" } })",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"https://api.letsfg.co/\" -UseBasicParsing -TimeoutSec 15; \"Status: $\\($r.StatusCode\\)\"; $r.Content.Substring\\(0,[Math]::Min\\(800,$r.Content.Length\\)\\) } catch { \"ERROR: $\\($_.Exception.Message\\)\" })",
+      "PowerShell(C:\\\\Python314\\\\python.exe -m pip install --quiet letsfg 2>&1)",
+      "PowerShell(C:\\\\Python314\\\\python.exe -m playwright install chromium 2>&1)",
+      "PowerShell($out = npx --yes letsfg search JFK LAX 2026-06-15 --json 2>&1 | Out-String; \"Length: $\\($out.Length\\)\"; $out.Substring\\(0,[Math]::Min\\(1500,$out.Length\\)\\))",
+      "PowerShell($out = npx --yes letsfg search JFK LAX 2026-06-15 --json 2>&1 | Out-String; $json = $out | ConvertFrom-Json; $json.offers[0] | ConvertTo-Json -Depth 6)",
+      "PowerShell(npx --yes letsfg search --help 2>&1)",
+      "PowerShell(npx --yes letsfg unlock --help 2>&1)",
+      "PowerShell(npx --yes letsfg unlock mm_544e0f52aa 2>&1)",
+      "PowerShell(\"---\")",
+      "PowerShell(npx tsc --noEmit 2>&1)"
+    ]
+  }
+}

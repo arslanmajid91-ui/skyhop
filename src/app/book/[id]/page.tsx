@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AIRLINES, AIRPORTS } from "@/lib/airlines";
+import { AIRPORTS, getAirline } from "@/lib/airlines";
 import { findFlight } from "@/lib/flights";
 import { formatPrice, formatTime } from "@/lib/format";
 import PassengerForm from "./PassengerForm";
@@ -17,6 +17,7 @@ export default async function BookingPage({
 
   const first = flight.segments[0];
   const last = flight.segments[flight.segments.length - 1];
+  const airline = getAirline(flight.airline, flight.airlineName);
 
   return (
     <div className="flex-1 bg-zinc-50 dark:bg-zinc-950">
@@ -48,11 +49,11 @@ export default async function BookingPage({
               <div className="flex items-center gap-2">
                 <div
                   className="flex h-6 w-6 items-center justify-center rounded text-[10px] font-bold text-white"
-                  style={{ backgroundColor: AIRLINES[flight.airline].color }}
+                  style={{ backgroundColor: airline.color }}
                 >
                   {flight.airline}
                 </div>
-                <span>{AIRLINES[flight.airline].name}</span>
+                <span>{airline.name}</span>
               </div>
               <div className="mt-3 text-zinc-900 dark:text-zinc-100">
                 {AIRPORTS[first.from]?.city ?? first.from} →{" "}

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AIRLINES } from "@/lib/airlines";
+import { getAirline } from "@/lib/airlines";
 import type { Flight } from "@/lib/flights";
 import { formatDuration, formatPrice, formatTime } from "@/lib/format";
 import AirlineLogo from "./AirlineLogo";
@@ -7,6 +7,7 @@ import AirlineLogo from "./AirlineLogo";
 export default function FlightCard({ flight }: { flight: Flight }) {
   const first = flight.segments[0];
   const last = flight.segments[flight.segments.length - 1];
+  const airline = getAirline(flight.airline, flight.airlineName);
 
   return (
     <Link
@@ -15,10 +16,10 @@ export default function FlightCard({ flight }: { flight: Flight }) {
     >
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <AirlineLogo code={flight.airline} />
+          <AirlineLogo code={flight.airline} name={flight.airlineName} />
           <div className="text-sm">
             <div className="font-medium text-zinc-900 dark:text-zinc-100">
-              {AIRLINES[flight.airline].name}
+              {airline.name}
             </div>
             <div className="text-xs text-zinc-500">
               {flight.segments.map((s) => s.flightNumber).join(" · ")}

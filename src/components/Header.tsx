@@ -10,6 +10,7 @@ export default function Header() {
         </Link>
         <nav className="hidden gap-6 text-sm text-zinc-600 dark:text-zinc-400 sm:flex">
           <Link href="/" className="hover:text-zinc-900 dark:hover:text-zinc-100">Search</Link>
+          <Link href="/settings" className="hover:text-zinc-900 dark:hover:text-zinc-100">Settings</Link>
           <a href="https://github.com/arslanmajid91-ui/skyhop" target="_blank" rel="noreferrer" className="hover:text-zinc-900 dark:hover:text-zinc-100">GitHub</a>
         </nav>
       </div>

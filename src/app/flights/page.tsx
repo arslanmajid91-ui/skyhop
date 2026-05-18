@@ -1,4 +1,4 @@
-import { AIRLINES, AIRPORTS, type AirlineCode } from "@/lib/airlines";
+import { AIRPORTS, getAirline, type AirlineCode, type Airline } from "@/lib/airlines";
 import { searchFlights, type Flight } from "@/lib/flights";
 import FlightCard from "@/components/FlightCard";
 import FilterSidebar, { type Filters } from "@/components/FilterSidebar";
@@ -43,7 +43,17 @@ export default async function FlightsPage({
   const cabin = (params.cabin ?? "economy") as "economy" | "premium" | "business" | "first";
   const passengers = Math.max(1, Number(params.passengers ?? 1));
 
-  const allResults = searchFlights({ from, to, date, cabin, passengers });
+  const allResults = await searchFlights({ from, to, date, cabin, passengers });
+
+  // Build the airline filter list from what's actually in the results — with
+  // a real-API backend, the carriers are dynamic (could be BA, AA, LH, …).
+  const airlinesInResults = (() => {
+    const seen = new Map<string, Airline>();
+    for (const f of allResults) {
+      if (!seen.has(f.airline)) seen.set(f.airline, getAirline(f.airline, f.airlineName));
+    }
+    return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
+  })();
 
   const priceBounds = allResults.length
     ? {
@@ -52,9 +62,10 @@ export default async function FlightsPage({
       }
     : { min: 0, max: 5000 };
 
+  const presentCodes = new Set(airlinesInResults.map((a) => a.code));
   const filters: Filters = {
     airlines: params.airlines
-      ? (params.airlines.split(",").filter((c) => c in AIRLINES) as AirlineCode[])
+      ? (params.airlines.split(",").filter((c) => presentCodes.has(c)) as AirlineCode[])
       : [],
     maxStops: params.stops === "0" ? 0 : 1,
     maxPrice: params.maxPrice ? Number(params.maxPrice) : priceBounds.max,
@@ -100,7 +111,11 @@ export default async function FlightsPage({
         </div>
 
         <div className="grid gap-6 md:grid-cols-[260px_1fr]">
-          <FilterSidebar filters={filters} priceBounds={priceBounds} />
+          <FilterSidebar
+            filters={filters}
+            priceBounds={priceBounds}
+            airlines={airlinesInResults}
+          />
 
           <div className="space-y-3">
             {filtered.length === 0 ? (

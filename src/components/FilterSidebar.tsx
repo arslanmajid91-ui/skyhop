@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { AIRLINE_LIST, type AirlineCode } from "@/lib/airlines";
+import { type Airline, type AirlineCode } from "@/lib/airlines";
 
 export type Filters = {
   airlines: AirlineCode[];
@@ -13,9 +13,12 @@ export type Filters = {
 export default function FilterSidebar({
   filters,
   priceBounds,
+  airlines,
 }: {
   filters: Filters;
   priceBounds: { min: number; max: number };
+  /** Airlines present in the current result set. */
+  airlines: Airline[];
 }) {
   const router = useRouter();
   const sp = useSearchParams();
@@ -89,7 +92,10 @@ export default function FilterSidebar({
           Airlines
         </h3>
         <div className="space-y-1.5 text-sm">
-          {AIRLINE_LIST.map((a) => (
+          {airlines.length === 0 && (
+            <p className="text-xs text-zinc-500">No results to filter.</p>
+          )}
+          {airlines.map((a) => (
             <label key={a.code} className="flex items-center gap-2">
               <input
                 type="checkbox"

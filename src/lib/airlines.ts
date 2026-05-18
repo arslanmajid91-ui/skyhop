@@ -4,22 +4,28 @@ import { AIRPORTS_GENERATED, AIRPORT_LATLNG_GENERATED, AIRPORT_ROUTE_COUNT_GENER
  *  Proxy for "busyness" — used to pick representative cities in cluster labels. */
 export const AIRPORT_ROUTE_COUNT: Record<string, number> = AIRPORT_ROUTE_COUNT_GENERATED;
 
-export type AirlineCode = "EK" | "EY" | "QR" | "TK";
+/** Two-letter IATA carrier code. Was a fixed union; broadened to string so
+ *  real-API results (Amadeus etc.) can pass through arbitrary carriers. */
+export type AirlineCode = string;
 
 export type Airline = {
   code: AirlineCode;
   name: string;
-  hub: string;
+  /** Optional — only the four "known" carriers used by the mock generator have one. */
+  hub?: string;
   /** Brand accent color (Tailwind-friendly hex) */
   color: string;
   /** Public airline logo CDN */
   logoUrl: string;
 };
 
-const logo = (iata: AirlineCode) =>
+const logo = (iata: string) =>
   `https://images.kiwi.com/airlines/64x64/${iata}.png`;
 
-export const AIRLINES: Record<AirlineCode, Airline> = {
+/** Curated brand info for the four carriers the mock generator can produce.
+ *  Real-API results may include any IATA code — use `getAirline()` to look up
+ *  with a graceful fallback. */
+export const AIRLINES: Record<string, Airline> = {
   EK: { code: "EK", name: "Emirates",         hub: "DXB", color: "#d71921", logoUrl: logo("EK") },
   EY: { code: "EY", name: "Etihad Airways",   hub: "AUH", color: "#bd8b41", logoUrl: logo("EY") },
   QR: { code: "QR", name: "Qatar Airways",    hub: "DOH", color: "#5c0a32", logoUrl: logo("QR") },
@@ -27,6 +33,28 @@ export const AIRLINES: Record<AirlineCode, Airline> = {
 };
 
 export const AIRLINE_LIST: Airline[] = Object.values(AIRLINES);
+
+/** Hash an IATA code to a deterministic hue for fallback brand color. */
+function hueFromCode(code: string): number {
+  let h = 0;
+  for (let i = 0; i < code.length; i++) h = (h * 31 + code.charCodeAt(i)) | 0;
+  return Math.abs(h) % 360;
+}
+
+/** Look up an airline by IATA code with a graceful fallback for unknown carriers
+ *  (Amadeus can return any of ~700). Pass `name` when the caller has a richer
+ *  display name from the API's dictionary. */
+export function getAirline(code: string, name?: string): Airline {
+  const known = AIRLINES[code];
+  if (known) return name && name !== known.name ? { ...known, name } : known;
+  const hue = hueFromCode(code);
+  return {
+    code,
+    name: name ?? code,
+    color: `hsl(${hue}, 55%, 38%)`,
+    logoUrl: logo(code),
+  };
+}
 
 /**
  * Each carrier's actual network — the cities they fly to from their hub.
