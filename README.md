@@ -1,97 +1,72 @@
-# skyhop ✈
+# Boundary 🏏
 
-Kid-friendly flight search focused on **Emirates, Etihad, Qatar Airways, and Turkish Airlines** — the four major Middle East / Turkey long-haul carriers. Pick a city on a colorful map, hop on a plane.
+Live-style cricket scores, stats and standings — the kind of home page you'd expect from a
+dedicated cricket site, covering ten international sides across Test, ODI and T20I cricket.
 
-Built with **Next.js 16**, **React 19.2**, and **Tailwind v4**. No backend — flight data is generated deterministically from a mock catalog so every demo run is reproducible.
+Built with **Next.js 16**, **React 19.2**, and **Tailwind v4**. No backend — every score, scorecard,
+player stat and points table is generated deterministically from a seeded mock dataset, so the
+same match always produces the same result on every run.
 
 ## Features
 
-- 🗺️ **Two ways to pick a route**
-  - 🗺️ **Real-world map** — d3-geo Mercator projection with pan / pinch-zoom, supercluster-powered cluster pins, and an animated plane riding the great-circle arc between FROM and TO
-  - 🔤 **Type / list** — classic dropdown for power users
-- 🔍 Search by origin, destination, date, cabin, and passenger count
-- 🏷️ Filter by airline, max stops, price; sort by price / duration / departure
-- ✈️ Flight detail page with full segment / baggage / layover breakdown
-- 💳 Mock booking flow: passenger form → fake checkout → confirmation (with confetti 🎉)
-- 🧸 Kid-friendly polish: bouncy +/- traveler counter, "Hoppy" mascot plane, drifting plane animation, gradient hero, wobble cards
+- 🔴 **Live scores** — a match "in progress" right now, with a partial second-innings scorecard
+  and required-run-rate framing
+- 📅 **Match centre** — filter by status (live / upcoming / completed) and format (Test / ODI / T20I)
+- 🧾 **Full scorecards** — innings-by-innings batting and bowling cards with dismissals, strike
+  rates and economy
+- 🏆 **Global T20 Cup 2026** — a two-group, round-robin points table with net run rate
+- 🌍 **Teams** — squads grouped by role, recent form (W/L strip), and upcoming fixtures
+- 📊 **Player stats** — sortable batting/bowling leaderboards per format, plus full career pages
 
 ## Run it
 
 ```bash
-git clone https://github.com/arslanmajid91-ui/skyhop.git
-cd skyhop
 npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). No env vars needed — there's no real API or database.
+Open [http://localhost:3000](http://localhost:3000). No env vars or API keys needed — there's no
+real data source.
 
-## How "search" works
+## How the data works
 
-The four carriers all fly globally via their hubs:
+There is no live feed. Instead, [`src/lib/hash.ts`](./src/lib/hash.ts) provides a seeded
+pseudo-random generator: every team, player, match and scorecard entry is derived from a stable
+string seed (e.g. `player-IND-3`, `match-07-inn1`), so reloading the site — or rebuilding it —
+always produces the exact same numbers. Team names are real ICC full member sides; squads use
+generated player names rather than real athletes, since the stats attached to them are simulated,
+not actual career records.
 
-| Code | Airline          | Hub                |
-| ---- | ---------------- | ------------------ |
-| EK   | Emirates         | Dubai (DXB)        |
-| EY   | Etihad Airways   | Abu Dhabi (AUH)    |
-| QR   | Qatar Airways    | Doha (DOH)         |
-| TK   | Turkish Airlines | Istanbul (IST)     |
-
-For any (`from`, `to`, `date`) we generate:
-- **Nonstop** flights when `from` or `to` is the airline's hub (2 options per carrier)
-- **1-stop via hub** otherwise (1–2 options per carrier)
-
-Times and prices are seeded by `hash(airline, route, date)` so refreshing the same search returns the same results. See [`src/lib/flights.ts`](./src/lib/flights.ts).
-
-Current city catalog: **~150 international airports** across Americas, Europe, Middle East, Africa, Asia/Pacific, Central Asia, and Oceania — defined in [`src/lib/airlines.ts`](./src/lib/airlines.ts) along with `AIRPORT_LATLNG` (real lat/lng for the Mercator map).
+Match scheduling is anchored to "today": completed matches sit in the past, one match is always
+mid-innings ("live"), and the rest are upcoming fixtures — so the live scores strip and standings
+always have something to show.
 
 ## Project structure
 
 ```
 src/
 ├── app/
-│   ├── layout.tsx
-│   ├── page.tsx                          # home: hero + search form + popular routes + carriers
-│   ├── globals.css                       # Tailwind v4 + custom kid-friendly animations
-│   ├── flights/
-│   │   ├── page.tsx                      # results (search params drive it)
-│   │   └── [id]/page.tsx                 # single flight detail
-│   └── book/
-│       └── [id]/
-│           ├── page.tsx                  # passenger details
-│           ├── PassengerForm.tsx
-│           ├── payment/
-│           │   ├── page.tsx
-│           │   └── PaymentForm.tsx
-│           └── confirmation/page.tsx     # booking ref + confetti burst
-├── components/
-│   ├── Header.tsx                        # sticky top nav
-│   ├── SearchForm.tsx                    # picker-mode toggle + form state
-│   ├── RealWorldMapPicker.tsx            # 🗺️ d3-geo + d3-zoom + supercluster + animated arc
-│   ├── BouncyCounter.tsx                 # +/- traveler counter
-│   ├── ConfettiBurst.tsx                 # canvas-confetti wrapper for the success page
-│   ├── FlightCard.tsx
-│   ├── FilterSidebar.tsx
-│   ├── AirlineLogo.tsx
-│   └── icons.tsx                         # SVG icons + Hoppy mascot + drifting plane
+│   ├── layout.tsx                 # shared header/footer shell
+│   ├── page.tsx                   # home: hero, live, results, fixtures, standings, stat leaders
+│   ├── matches/
+│   │   ├── page.tsx               # match centre (status/format filters)
+│   │   └── [id]/page.tsx          # full scorecard
+│   ├── teams/
+│   │   ├── page.tsx               # team grid
+│   │   └── [id]/page.tsx          # squad, form, fixtures
+│   ├── players/
+│   │   ├── page.tsx               # batting/bowling leaderboards
+│   │   └── [id]/page.tsx          # player career page
+│   └── standings/page.tsx         # Global T20 Cup points tables
+├── components/                    # MatchCard, Scorecard, StandingsTable, LeaderboardTable, ...
 └── lib/
-    ├── airlines.ts                       # AIRLINES, AIRPORTS, AIRPORT_LATLNG, airlineServes()
-    ├── flights.ts                        # searchFlights() + findFlight()
-    └── format.ts                         # price / duration / time formatters
+    ├── hash.ts                    # seeded RNG helpers
+    ├── teams.ts                   # the 10 sides
+    ├── players.ts                 # generated squads + career stats
+    ├── matches.ts                 # fixtures, scorecards, results
+    ├── standings.ts               # points table computation
+    └── format.ts                  # overs / run-rate / date formatting
 ```
-
-## Swapping mock data for a real API
-
-The single seam to replace is `searchFlights()` / `findFlight()` in [`src/lib/flights.ts`](./src/lib/flights.ts). Wire those to e.g. [Duffel](https://duffel.com) or [Amadeus Self-Service](https://developers.amadeus.com) — pages already pass typed `Flight` objects around so the UI doesn't need to change.
-
-## Next steps
-
-- [ ] Scale the airport catalog from ~21 to 1,200+ international airports (requires a zoomable / clustered map — see "Map at scale" below)
-- [ ] Round-trip / multi-city search
-- [ ] Real airport search (typeahead) instead of dropdown
-- [ ] Seat selection in the booking flow
-- [ ] Persist bookings (Supabase) so users can view trip history
-- [ ] Real fares via Duffel sandbox
 
 ## Stack
 
@@ -99,8 +74,6 @@ The single seam to replace is `searchFlights()` / `findFlight()` in [`src/lib/fl
 - [React 19.2](https://react.dev)
 - [Tailwind CSS v4](https://tailwindcss.com)
 - TypeScript
-- [d3-geo](https://github.com/d3/d3-geo) + [topojson-client](https://github.com/topojson/topojson-client) + [world-atlas](https://github.com/topojson/world-atlas) — real-world Mercator map
-- [canvas-confetti](https://github.com/catdad/canvas-confetti) — booking-confirmation celebration
 
 ## Heads up — Next.js 16 vs. older docs
 
